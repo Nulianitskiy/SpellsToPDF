@@ -30,6 +30,18 @@ npm run dev
 npm run build
 ```
 
+## Deploy to GitHub Pages
+
+This project is configured for GitHub Pages via GitHub Actions.
+
+1. Push to the `main` branch.
+2. In GitHub, go to `Settings` → `Pages`.
+3. Set **Source** to **GitHub Actions**.
+4. Wait for the **Deploy to GitHub Pages** workflow to finish.
+
+The site will be available at:
+`https://<your-username>.github.io/SpellsToPDF/`
+
 ## Project Structure
 
 ```
