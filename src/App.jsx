@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import spells from './data/spellsRu2024.json'
 import SpellFilters from './components/SpellFilters'
 import SpellList from './components/SpellList'
+import ScrollToTopButton from './components/ScrollToTopButton'
 import { generatePDF } from './utils/pdfGenerator'
 import './App.css'
 
@@ -31,6 +32,7 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('')
   const [levelFilter, setLevelFilter] = useState(null)
   const [preparedSpells, setPreparedSpells] = useState(new Set())
+  const [pdfFormat, setPdfFormat] = useState('list') // 'list' or 'cards'
 
   const availableSpells = useMemo(() => {
     return spells.filter(spell => {
@@ -66,7 +68,7 @@ function App() {
       alert('Выберите хотя бы одно заклинание')
       return
     }
-    generatePDF(selectedSpellsData)
+    generatePDF(selectedSpellsData, pdfFormat)
   }
 
   const preparedCount = preparedSpells.size
@@ -95,13 +97,40 @@ function App() {
         <span className="prepared-count">
           Подготовлено: {preparedCount} {pluralizeSpells(preparedCount)}
         </span>
-        <button 
-          className="generate-btn" 
-          onClick={handleGeneratePDF}
-          disabled={preparedCount === 0}
-        >
-          Создать PDF
-        </button>
+        <div className="pdf-controls">
+          <div className="format-selector">
+            <label className="format-label">Формат PDF:</label>
+            <div className="format-options">
+              <label className="format-option">
+                <input
+                  type="radio"
+                  name="pdfFormat"
+                  value="list"
+                  checked={pdfFormat === 'list'}
+                  onChange={(e) => setPdfFormat(e.target.value)}
+                />
+                <span>Список</span>
+              </label>
+              <label className="format-option">
+                <input
+                  type="radio"
+                  name="pdfFormat"
+                  value="cards"
+                  checked={pdfFormat === 'cards'}
+                  onChange={(e) => setPdfFormat(e.target.value)}
+                />
+                <span>Карточки</span>
+              </label>
+            </div>
+          </div>
+          <button 
+            className="generate-btn" 
+            onClick={handleGeneratePDF}
+            disabled={preparedCount === 0}
+          >
+            Создать PDF
+          </button>
+        </div>
       </div>
 
       <SpellList
@@ -109,6 +138,8 @@ function App() {
         preparedSpells={preparedSpells}
         toggleSpell={toggleSpell}
       />
+      
+      <ScrollToTopButton />
     </div>
   )
 }
