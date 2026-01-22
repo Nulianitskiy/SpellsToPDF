@@ -6,7 +6,7 @@
 
 body {
   font-family: 'Crimson Text', Georgia, serif;
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%);
+  background: linear-gradient(135deg, #060608 0%, #040406 50%, #020203 100%);
   min-height: 100vh;
   color: #e8e8e8;
 }
@@ -26,7 +26,7 @@ body {
 .header h1 {
   font-family: 'Cinzel', serif;
   font-size: 2.5rem;
-  color: #c9a227;
+  color: #ffd700;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
   letter-spacing: 2px;
   margin-bottom: 8px;
@@ -41,7 +41,7 @@ body {
 /* Filters */
 .filters {
   background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(201, 162, 39, 0.2);
+  border: 1px solid rgba(255, 215, 0, 0.2);
   border-radius: 8px;
   padding: 24px;
   margin-bottom: 24px;
@@ -65,7 +65,7 @@ body {
 
 .filter-group label {
   font-size: 0.85rem;
-  color: #c9a227;
+  color: #ffd700;
   text-transform: uppercase;
   letter-spacing: 1px;
 }
@@ -73,7 +73,7 @@ body {
 .filter-group select,
 .filter-group input {
   background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(201, 162, 39, 0.3);
+  border: 1px solid rgba(255, 215, 0, 0.3);
   border-radius: 4px;
   padding: 10px 14px;
   color: #e8e8e8;
@@ -85,11 +85,11 @@ body {
 .filter-group select:focus,
 .filter-group input:focus {
   outline: none;
-  border-color: #c9a227;
+  border-color: #ffd700;
 }
 
 .filter-group select option {
-  background: #1a1a2e;
+  background: #0f0f1f;
   color: #e8e8e8;
 }
 
@@ -101,7 +101,7 @@ body {
 
 .level-btn {
   background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(201, 162, 39, 0.3);
+  border: 1px solid rgba(255, 215, 0, 0.3);
   border-radius: 4px;
   padding: 8px 16px;
   color: #8a8a9a;
@@ -111,14 +111,14 @@ body {
 }
 
 .level-btn:hover {
-  border-color: #c9a227;
-  color: #c9a227;
+  border-color: #ffd700;
+  color: #ffd700;
 }
 
 .level-btn.active {
-  background: rgba(201, 162, 39, 0.2);
-  border-color: #c9a227;
-  color: #c9a227;
+  background: rgba(255, 215, 0, 0.2);
+  border-color: #ffd700;
+  color: #ffd700;
 }
 
 /* Actions Bar */
@@ -136,7 +136,7 @@ body {
 }
 
 .prepared-count {
-  color: #c9a227;
+  color: #ffd700;
   font-size: 1.1rem;
 }
 
@@ -154,7 +154,7 @@ body {
 }
 
 .format-label {
-  color: #c9a227;
+  color: #ffd700;
   font-size: 0.9rem;
   text-transform: uppercase;
   letter-spacing: 1px;
@@ -176,13 +176,13 @@ body {
 }
 
 .format-option:hover {
-  color: #c9a227;
+  color: #ffd700;
 }
 
 .format-option input[type="radio"] {
   width: 16px;
   height: 16px;
-  accent-color: #c9a227;
+  accent-color: #ffd700;
   cursor: pointer;
 }
 
@@ -225,7 +225,7 @@ body {
 /* Spell Statistics */
 .spell-statistics {
   background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(201, 162, 39, 0.2);
+  border: 1px solid rgba(255, 215, 0, 0.2);
   border-radius: 8px;
   padding: 20px;
   min-width: 200px;
@@ -237,10 +237,10 @@ body {
 .statistics-title {
   font-family: 'Cinzel', serif;
   font-size: 1.2rem;
-  color: #c9a227;
+  color: #ffd700;
   margin-bottom: 16px;
   padding-bottom: 8px;
-  border-bottom: 1px solid rgba(201, 162, 39, 0.3);
+  border-bottom: 1px solid rgba(255, 215, 0, 0.3);
   text-align: center;
 }
 
@@ -265,7 +265,7 @@ body {
 
 .statistics-divider {
   margin: 8px 0;
-  border-top: 1px solid rgba(201, 162, 39, 0.3);
+  border-top: 1px solid rgba(255, 215, 0, 0.3);
 }
 
 .statistics-row.statistics-total {
@@ -282,7 +282,7 @@ body {
 }
 
 .statistics-value {
-  color: #c9a227;
+  color: #ffd700;
   font-size: 1rem;
   font-weight: bold;
 }
@@ -300,7 +300,7 @@ body {
 }
 
 .statistics-value.statistics-prepared {
-  color: #c9a227;
+  color: #ffd700;
 }
 
 .statistics-value.statistics-always-prepared {
@@ -308,7 +308,7 @@ body {
 }
 
 .statistics-row.statistics-total .statistics-label {
-  color: #c9a227;
+  color: #ffd700;
   font-size: 1rem;
 }
 
@@ -319,18 +319,18 @@ body {
 .statistics-row.statistics-grand-total {
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 2px solid rgba(201, 162, 39, 0.5);
+  border-top: 2px solid rgba(255, 215, 0, 0.5);
   font-weight: bold;
   font-size: 1.05rem;
 }
 
 .statistics-row.statistics-grand-total .statistics-label {
-  color: #c9a227;
+  color: #ffd700;
   font-size: 1rem;
 }
 
 .statistics-row.statistics-grand-total .statistics-value {
-  color: #c9a227;
+  color: #ffd700;
   font-size: 1.15rem;
 }
 
@@ -361,10 +361,10 @@ body {
 .level-header {
   font-family: 'Cinzel', serif;
   font-size: 1.4rem;
-  color: #c9a227;
+  color: #ffd700;
   margin-bottom: 16px;
   padding-bottom: 8px;
-  border-bottom: 1px solid rgba(201, 162, 39, 0.3);
+  border-bottom: 1px solid rgba(255, 215, 0, 0.3);
 }
 
 .spells-grid {
@@ -384,13 +384,13 @@ body {
 
 .spell-card:hover {
   background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(201, 162, 39, 0.3);
+  border-color: rgba(255, 215, 0, 0.3);
 }
 
 .spell-card.prepared {
-  background: rgba(201, 162, 39, 0.1);
-  border-color: rgba(201, 162, 39, 0.5);
-  box-shadow: 0 0 20px rgba(201, 162, 39, 0.1);
+  background: rgba(255, 215, 0, 0.1);
+  border-color: rgba(255, 215, 0, 0.5);
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.1);
 }
 
 .spell-card.always-prepared {
@@ -410,7 +410,7 @@ body {
 .spell-card-header input[type="checkbox"] {
   width: 18px;
   height: 18px;
-  accent-color: #c9a227;
+  accent-color: #ffd700;
   cursor: pointer;
 }
 
@@ -432,7 +432,7 @@ body {
 }
 
 .spell-card.prepared .spell-name {
-  color: #c9a227;
+  color: #ffd700;
 }
 
 .spell-card.always-prepared .spell-name {
@@ -447,7 +447,7 @@ body {
 }
 
 .spell-card.prepared .spell-level {
-  color: #c9a227;
+  color: #ffd700;
   opacity: 0.8;
 }
 
@@ -481,7 +481,7 @@ body {
 }
 
 .spell-meta .school {
-  color: #9d8cff;
+  color: #7a5fff;
 }
 
 .spell-description {
