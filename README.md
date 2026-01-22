@@ -1,33 +1,47 @@
 # SpellsToPDF
 
-A simple React application for preparing D&D spells and generating a PDF document.
+React-приложение для подготовки заклинаний D&D и генерации PDF-документа.
 
-## Features
+**Live Demo:** [https://nulianitskiy.github.io/SpellsToPDF/](https://nulianitskiy.github.io/SpellsToPDF/)
 
-- Filter spells by class and maximum spell level
-- Search spells by name
-- Filter by specific spell level (cantrips, 1st level, etc.)
-- Mark spells as prepared with checkboxes
-- Generate a formatted PDF document with all prepared spells
+## Возможности
 
-## Getting Started
+- Фильтрация заклинаний по классу и максимальному уровню
+- Поиск заклинаний по названию
+- Фильтрация по конкретному уровню заклинаний (заговоры, 1 уровень и т.д.)
+- Отметка заклинаний как подготовленных (три состояния: не подготовлено, подготовлено, всегда подготовлено)
+- Статистика подготовленных заклинаний по уровням
+- Генерация PDF-документа в двух форматах:
+  - **Список** — заклинания сгруппированы по уровням с полным описанием
+  - **Карточки** — компактные карточки заклинаний в формате 2 колонки
+- Кнопка прокрутки наверх для удобной навигации
 
-### Install dependencies
+## Начало работы
+
+### Установка зависимостей
 
 ```bash
 npm install
 ```
 
-### Run development server
+### Запуск сервера разработки
 
 ```bash
 npm run dev
 ```
 
-### Build for production
+### Сборка для production
 
 ```bash
 npm run build
+```
+
+### Парсинг заклинаний
+
+Для парсинга заклинаний из исходных данных используется скрипт:
+
+```bash
+npm run parse-spell
 ```
 
 ## Deploy to GitHub Pages
@@ -42,47 +56,71 @@ This project is configured for GitHub Pages via GitHub Actions.
 The site will be available at:
 `https://<your-username>.github.io/SpellsToPDF/`
 
-## Project Structure
+**Current deployment:** [https://nulianitskiy.github.io/SpellsToPDF/](https://nulianitskiy.github.io/SpellsToPDF/)
+
+## Структура проекта
 
 ```
 src/
 ├── components/
-│   ├── SpellCard.jsx      # Individual spell display
-│   ├── SpellFilters.jsx   # Filter controls
-│   └── SpellList.jsx      # Spell list grouped by level
+│   ├── SpellCard.jsx          # Отображение отдельного заклинания
+│   ├── SpellFilters.jsx       # Элементы управления фильтрами
+│   ├── SpellList.jsx          # Список заклинаний, сгруппированных по уровням
+│   ├── SpellStatistics.jsx    # Статистика подготовленных заклинаний
+│   └── ScrollToTopButton.jsx  # Кнопка прокрутки наверх
 ├── data/
-│   └── spells.json        # Spell database
+│   ├── spells.json            # База данных заклинаний (английская версия)
+│   └── spellsRu2024.json      # База данных заклинаний (русская версия 2024)
 ├── utils/
-│   └── pdfGenerator.js    # Markdown to PDF conversion
-├── App.jsx                # Main application component
-├── App.css                # Application styles
-└── main.jsx               # Entry point
+│   └── pdfGenerator.js        # Генерация PDF (форматы: список и карточки)
+├── App.jsx                     # Главный компонент приложения
+├── App.css                     # Стили приложения
+└── main.jsx                    # Точка входа
 ```
 
-## Adding More Spells
+## Добавление заклинаний
 
-Edit `src/data/spells.json` to add more spells. Each spell should follow this schema:
+Для добавления новых заклинаний отредактируйте файл `src/data/spellsRu2024.json` (или `spells.json` для английской версии). Каждое заклинание должно следовать следующей схеме:
 
 ```json
 {
   "id": "unique_spell_id",
-  "name": "Spell Name",
+  "name": "Название заклинания",
   "level": 1,
-  "school": "Evocation",
-  "casting_time": "1 action",
-  "range": "120 feet",
-  "components": ["V", "S", "M"],
-  "duration": "Instantaneous",
+  "school": "Вызов",
+  "casting_time": "1 действие",
+  "range": "36 метров",
+  "components": ["В", "С", "М"],
+  "material": "опционально: описание материального компонента",
+  "duration": "Мгновенное",
   "concentration": false,
   "ritual": false,
-  "classes": ["Wizard", "Sorcerer"],
-  "description": "Spell description...",
-  "at_higher_levels": "Optional: effects at higher levels..."
+  "classes": ["Волшебник", "Чародей"],
+  "description": "Описание заклинания...",
+  "at_higher_levels": "Опционально: эффекты на более высоких уровнях..."
 }
 ```
 
-## Tech Stack
+**Примечание:** Приложение использует `spellsRu2024.json` как основной источник данных (см. `src/App.jsx`).
 
-- React + Vite
-- marked (Markdown parsing)
-- html2pdf.js (PDF generation)
+## Технологический стек
+
+- **React 19** + **Vite** — фреймворк и сборщик
+- **html2pdf.js** — генерация PDF-документов
+- **ESLint** — линтинг кода
+
+## Особенности реализации
+
+- **Три состояния заклинаний:**
+  - Не подготовлено (по умолчанию)
+  - Подготовлено (включается в PDF)
+  - Всегда подготовлено (включается в PDF, отдельно отображается в статистике)
+
+- **Форматы PDF:**
+  - **Список** — структурированный список с полным описанием, сгруппированный по уровням
+  - **Карточки** — компактные карточки в формате 2 колонки для удобного просмотра
+
+- **Статистика:**
+  - Отображение количества подготовленных заклинаний по каждому уровню
+  - Разделение на "подготовлено" и "всегда подготовлено"
+  - Общее количество выбранных заклинаний

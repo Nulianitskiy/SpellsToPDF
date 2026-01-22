@@ -35,6 +35,7 @@ function App() {
   // Map: spellId -> state (0 = не подготовлено, 1 = подготовлено, 2 = всегда подготовлено)
   const [preparedSpells, setPreparedSpells] = useState(new Map())
   const [pdfFormat, setPdfFormat] = useState('list') // 'list' or 'cards'
+  const [spellVersion, setSpellVersion] = useState('2024') // '2024' or '2014'
 
   const availableSpells = useMemo(() => {
     return spells.filter(spell => {
@@ -101,6 +102,8 @@ function App() {
         setLevelFilter={setLevelFilter}
         allClasses={ALL_CLASSES}
         maxSpellLevel={MAX_SPELL_LEVEL}
+        spellVersion={spellVersion}
+        setSpellVersion={setSpellVersion}
       />
 
       <div className="actions">

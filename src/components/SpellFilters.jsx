@@ -8,7 +8,9 @@ function SpellFilters({
   levelFilter,
   setLevelFilter,
   allClasses,
-  maxSpellLevel
+  maxSpellLevel,
+  spellVersion,
+  setSpellVersion
 }) {
   const levels = Array.from({ length: maxSpellLevel + 1 }, (_, i) => i)
 
@@ -53,22 +55,50 @@ function SpellFilters({
         </div>
       </div>
 
-      <div className="level-filters">
-        <button
-          className={`level-btn ${levelFilter === null ? 'active' : ''}`}
-          onClick={() => setLevelFilter(null)}
-        >
-          Все
-        </button>
-        {levels.map(level => (
+      <div className="level-filters-wrapper">
+        <div className="level-filters">
           <button
-            key={level}
-            className={`level-btn ${levelFilter === level ? 'active' : ''}`}
-            onClick={() => setLevelFilter(level)}
+            className={`level-btn ${levelFilter === null ? 'active' : ''}`}
+            onClick={() => setLevelFilter(null)}
           >
-            {level === 0 ? 'Заговор' : level}
+            Все
           </button>
-        ))}
+          {levels.map(level => (
+            <button
+              key={level}
+              className={`level-btn ${levelFilter === level ? 'active' : ''}`}
+              onClick={() => setLevelFilter(level)}
+            >
+              {level === 0 ? 'Заговор' : level}
+            </button>
+          ))}
+        </div>
+        <div className="version-selector">
+          <label className="version-label">Версия:</label>
+          <div className="version-options">
+            <label className="version-option">
+              <input
+                type="radio"
+                name="spellVersion"
+                value="2024"
+                checked={spellVersion === '2024'}
+                onChange={(e) => setSpellVersion(e.target.value)}
+              />
+              <span>2024</span>
+            </label>
+            <label className="version-option version-option-disabled" title="Эта функция ещё не готова">
+              <input
+                type="radio"
+                name="spellVersion"
+                value="2014"
+                checked={spellVersion === '2014'}
+                onChange={(e) => setSpellVersion(e.target.value)}
+                disabled
+              />
+              <span>2014</span>
+            </label>
+          </div>
+        </div>
       </div>
     </div>
   )

@@ -469,9 +469,14 @@ export function generatePDF(spells, format = 'list') {
     })
   }
 
+  // Generate filename with current date
+  const now = new Date()
+  const dateStr = now.toISOString().split('T')[0] // YYYY-MM-DD format
+  const filename = `spellsList-${dateStr}.pdf`
+
   const opt = {
     margin: [10, 12, 10, 12], // top, right, bottom, left in mm
-    filename: format === 'cards' ? 'zaklinaniya-kartochkami.pdf' : 'podgotovlennye-zaklinaniya.pdf',
+    filename: filename,
     image: { type: 'jpeg', quality: 0.98 },
     html2canvas: { 
       scale: 2,
