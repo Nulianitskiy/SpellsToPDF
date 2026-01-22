@@ -33,7 +33,7 @@ function SpellList({ spells, preparedSpells, toggleSpell }) {
               <SpellCard
                 key={spell.id}
                 spell={spell}
-                isPrepared={preparedSpells.has(spell.id)}
+                spellState={preparedSpells.get(spell.id) || 0}
                 onToggle={() => toggleSpell(spell.id)}
               />
             ))}

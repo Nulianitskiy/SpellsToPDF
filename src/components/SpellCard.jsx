@@ -1,38 +1,23 @@
-function SpellCard({ spell, isPrepared, onToggle }) {
-  const tags = []
-  if (spell.concentration) tags.push('К') // Концентрация
-  if (spell.ritual) tags.push('Р') // Ритуал
-  const componentsText = spell.components
-    .map(component => (component === 'M' && spell.material ? `M (${spell.material})` : component))
-    .join(', ')
+function SpellCard({ spell, spellState, onToggle }) {
+  const levelText = spell.level === 0 ? 'Заговор' : `${spell.level} уровень`
+  
+  // spellState: 0 = не подготовлено, 1 = подготовлено, 2 = всегда подготовлено
+  const stateClass = spellState === 1 ? 'prepared' : spellState === 2 ? 'always-prepared' : ''
+  const isChecked = spellState > 0
 
   return (
-    <div className={`spell-card ${isPrepared ? 'prepared' : ''}`}>
+    <div className={`spell-card ${stateClass}`}>
       <label className="spell-card-header">
         <input
           type="checkbox"
-          checked={isPrepared}
+          checked={isChecked}
           onChange={onToggle}
         />
-        <span className="spell-name">{spell.name}</span>
-        {tags.length > 0 && (
-          <span className="spell-tags">
-            {tags.map(tag => (
-              <span key={tag} className="tag" title={tag === 'К' ? 'Концентрация' : 'Ритуал'}>{tag}</span>
-            ))}
-          </span>
-        )}
+        <div className="spell-info">
+          <span className="spell-name">{spell.name}</span>
+          <span className="spell-level">{levelText}</span>
+        </div>
       </label>
-      <div className="spell-meta">
-        <span className="school">{spell.school}</span>
-        <span className="casting-time">{spell.casting_time}</span>
-        <span className="range">{spell.range}</span>
-      </div>
-      <p className="spell-description">{spell.description}</p>
-      <div className="spell-footer">
-        <span className="components">{componentsText}</span>
-        <span className="duration">{spell.duration}</span>
-      </div>
     </div>
   )
 }

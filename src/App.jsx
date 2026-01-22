@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import spells from './data/spellsRu2024.json'
 import SpellFilters from './components/SpellFilters'
 import SpellList from './components/SpellList'
+import SpellStatistics from './components/SpellStatistics'
 import ScrollToTopButton from './components/ScrollToTopButton'
 import { generatePDF } from './utils/pdfGenerator'
 import './App.css'
@@ -31,7 +32,8 @@ function App() {
   const [maxLevel, setMaxLevel] = useState(9)
   const [searchQuery, setSearchQuery] = useState('')
   const [levelFilter, setLevelFilter] = useState(null)
-  const [preparedSpells, setPreparedSpells] = useState(new Set())
+  // Map: spellId -> state (0 = не подготовлено, 1 = подготовлено, 2 = всегда подготовлено)
+  const [preparedSpells, setPreparedSpells] = useState(new Map())
   const [pdfFormat, setPdfFormat] = useState('list') // 'list' or 'cards'
 
   const availableSpells = useMemo(() => {
@@ -52,18 +54,25 @@ function App() {
 
   const toggleSpell = (spellId) => {
     setPreparedSpells(prev => {
-      const next = new Set(prev)
-      if (next.has(spellId)) {
+      const next = new Map(prev)
+      const currentState = next.get(spellId) || 0
+      // Циклическое переключение: 0 -> 1 -> 2 -> 0
+      const nextState = (currentState + 1) % 3
+      if (nextState === 0) {
         next.delete(spellId)
       } else {
-        next.add(spellId)
+        next.set(spellId, nextState)
       }
       return next
     })
   }
 
   const handleGeneratePDF = () => {
-    const selectedSpellsData = spells.filter(spell => preparedSpells.has(spell.id))
+    // Включаем заклинания в состоянии 1 (подготовлено) и 2 (всегда подготовлено)
+    const selectedSpellsData = spells.filter(spell => {
+      const state = preparedSpells.get(spell.id)
+      return state === 1 || state === 2
+    })
     if (selectedSpellsData.length === 0) {
       alert('Выберите хотя бы одно заклинание')
       return
@@ -71,7 +80,8 @@ function App() {
     generatePDF(selectedSpellsData, pdfFormat)
   }
 
-  const preparedCount = preparedSpells.size
+  // Считаем все выбранные заклинания (состояния 1 и 2)
+  const preparedCount = Array.from(preparedSpells.values()).filter(state => state === 1 || state === 2).length
 
   return (
     <div className="app">
@@ -133,11 +143,17 @@ function App() {
         </div>
       </div>
 
-      <SpellList
-        spells={filteredSpells}
-        preparedSpells={preparedSpells}
-        toggleSpell={toggleSpell}
-      />
+      <div className="main-content">
+        <SpellStatistics
+          preparedSpells={preparedSpells}
+          spells={spells}
+        />
+        <SpellList
+          spells={filteredSpells}
+          preparedSpells={preparedSpells}
+          toggleSpell={toggleSpell}
+        />
+      </div>
       
       <ScrollToTopButton />
     </div>

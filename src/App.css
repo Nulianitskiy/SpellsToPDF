@@ -215,11 +215,139 @@ body {
   cursor: not-allowed;
 }
 
+/* Main Content Layout */
+.main-content {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+/* Spell Statistics */
+.spell-statistics {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(201, 162, 39, 0.2);
+  border-radius: 8px;
+  padding: 20px;
+  min-width: 200px;
+  position: sticky;
+  top: 20px;
+  backdrop-filter: blur(10px);
+}
+
+.statistics-title {
+  font-family: 'Cinzel', serif;
+  font-size: 1.2rem;
+  color: #c9a227;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(201, 162, 39, 0.3);
+  text-align: center;
+}
+
+.statistics-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.statistics-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  gap: 12px;
+}
+
+.statistics-row:last-child {
+  border-bottom: none;
+}
+
+.statistics-divider {
+  margin: 8px 0;
+  border-top: 1px solid rgba(201, 162, 39, 0.3);
+}
+
+.statistics-row.statistics-total {
+  font-weight: bold;
+}
+
+.statistics-row.statistics-always-prepared-row {
+  gap: 20px;
+}
+
+.statistics-label {
+  color: #8a8a9a;
+  font-size: 0.95rem;
+}
+
+.statistics-value {
+  color: #c9a227;
+  font-size: 1rem;
+  font-weight: bold;
+}
+
+.statistics-values {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.statistics-separator {
+  color: #8a8a9a;
+  font-size: 0.9rem;
+  margin: 0 4px;
+}
+
+.statistics-value.statistics-prepared {
+  color: #c9a227;
+}
+
+.statistics-value.statistics-always-prepared {
+  color: #ff6b6b;
+}
+
+.statistics-row.statistics-total .statistics-label {
+  color: #c9a227;
+  font-size: 1rem;
+}
+
+.statistics-row.statistics-total .statistics-value {
+  font-size: 1.1rem;
+}
+
+.statistics-row.statistics-grand-total {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 2px solid rgba(201, 162, 39, 0.5);
+  font-weight: bold;
+  font-size: 1.05rem;
+}
+
+.statistics-row.statistics-grand-total .statistics-label {
+  color: #c9a227;
+  font-size: 1rem;
+}
+
+.statistics-row.statistics-grand-total .statistics-value {
+  color: #c9a227;
+  font-size: 1.15rem;
+}
+
+.statistics-empty {
+  text-align: center;
+  color: #8a8a9a;
+  font-style: italic;
+  padding: 20px 0;
+  font-size: 0.9rem;
+}
+
 /* Spell List */
 .spell-list {
   display: flex;
   flex-direction: column;
   gap: 32px;
+  flex: 1;
 }
 
 .spell-list-empty {
@@ -241,8 +369,8 @@ body {
 
 .spells-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 12px;
 }
 
 /* Spell Card */
@@ -250,7 +378,7 @@ body {
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
-  padding: 16px;
+  padding: 12px 16px;
   transition: all 0.2s;
 }
 
@@ -265,12 +393,18 @@ body {
   box-shadow: 0 0 20px rgba(201, 162, 39, 0.1);
 }
 
+.spell-card.always-prepared {
+  background: rgba(139, 0, 0, 0.2);
+  border-color: rgba(139, 0, 0, 0.6);
+  box-shadow: 0 0 25px rgba(139, 0, 0, 0.3);
+  border-width: 2px;
+}
+
 .spell-card-header {
   display: flex;
   align-items: center;
   gap: 10px;
   cursor: pointer;
-  margin-bottom: 12px;
 }
 
 .spell-card-header input[type="checkbox"] {
@@ -280,15 +414,47 @@ body {
   cursor: pointer;
 }
 
+.spell-card.always-prepared .spell-card-header input[type="checkbox"] {
+  accent-color: #ff6b6b;
+}
+
+.spell-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
 .spell-name {
   font-family: 'Cinzel', serif;
   font-size: 1.1rem;
   color: #e8e8e8;
-  flex: 1;
 }
 
 .spell-card.prepared .spell-name {
   color: #c9a227;
+}
+
+.spell-card.always-prepared .spell-name {
+  color: #ff6b6b;
+  font-weight: bold;
+}
+
+.spell-level {
+  font-size: 0.85rem;
+  color: #8a8a9a;
+  font-style: italic;
+}
+
+.spell-card.prepared .spell-level {
+  color: #c9a227;
+  opacity: 0.8;
+}
+
+.spell-card.always-prepared .spell-level {
+  color: #ff6b6b;
+  opacity: 0.9;
+  font-weight: 600;
 }
 
 .spell-tags {
@@ -370,6 +536,18 @@ body {
 
 .scroll-to-top-btn:active {
   transform: translateY(-1px);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .main-content {
+    flex-direction: column;
+  }
+  
+  .spell-statistics {
+    position: static;
+    width: 100%;
+  }
 }
 
 /* Import Google Fonts */
