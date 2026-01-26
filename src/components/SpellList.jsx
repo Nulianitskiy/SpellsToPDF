@@ -1,6 +1,6 @@
 import SpellCard from './SpellCard'
 
-function SpellList({ spells, preparedSpells, toggleSpell }) {
+function SpellList({ spells, preparedSpells, toggleSpell, toggleAlwaysPrepared }) {
   if (spells.length === 0) {
     return (
       <div className="spell-list-empty">
@@ -35,6 +35,7 @@ function SpellList({ spells, preparedSpells, toggleSpell }) {
                 spell={spell}
                 spellState={preparedSpells.get(spell.id) || 0}
                 onToggle={() => toggleSpell(spell.id)}
+                onDoubleClick={() => toggleAlwaysPrepared(spell.id)}
               />
             ))}
           </div>

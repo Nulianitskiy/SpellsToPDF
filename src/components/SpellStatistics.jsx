@@ -30,8 +30,9 @@ function SpellStatistics({ preparedSpells, spells }) {
     (preparedStats[level] || 0) > 0 || (alwaysPreparedStats[level] || 0) > 0
   )
   
-  const totalPrepared = preparedSpellsData.length
-  const totalAlwaysPrepared = alwaysPreparedSpellsData.length
+  // Исключаем заговоры (level === 0) из подсчета
+  const totalPrepared = preparedSpellsData.filter(spell => spell.level > 0).length
+  const totalAlwaysPrepared = alwaysPreparedSpellsData.filter(spell => spell.level > 0).length
   const total = totalPrepared + totalAlwaysPrepared
   
   return (

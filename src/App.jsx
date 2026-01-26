@@ -1,14 +1,12 @@
-import { useState, useMemo } from 'react'
-import spells from './data/spellsRu2024.json'
+import { useState, useMemo, useEffect } from 'react'
+import spells2024 from './data/spellsRu2024.json'
+import spells2014 from './data/spellsRu2014.json'
 import SpellFilters from './components/SpellFilters'
 import SpellList from './components/SpellList'
 import SpellStatistics from './components/SpellStatistics'
 import ScrollToTopButton from './components/ScrollToTopButton'
 import { generatePDF } from './utils/pdfGenerator'
 import './App.css'
-
-const ALL_CLASSES = [...new Set(spells.flatMap(spell => spell.classes))].sort()
-const MAX_SPELL_LEVEL = Math.max(...spells.map(spell => spell.level))
 
 // Склонение слова "заклинание"
 function pluralizeSpells(count) {
@@ -37,13 +35,32 @@ function App() {
   const [pdfFormat, setPdfFormat] = useState('list') // 'list' or 'cards'
   const [spellVersion, setSpellVersion] = useState('2024') // '2024' or '2014'
 
+  // Выбираем данные на основе версии
+  const spells = useMemo(() => {
+    return spellVersion === '2014' ? spells2014 : spells2024
+  }, [spellVersion])
+
+  // Вычисляем классы и максимальный уровень на основе выбранной версии
+  const allClasses = useMemo(() => {
+    return [...new Set(spells.flatMap(spell => spell.classes))].sort()
+  }, [spells])
+
+  const maxSpellLevel = useMemo(() => {
+    return Math.max(...spells.map(spell => spell.level))
+  }, [spells])
+
+  // Сбрасываем выбранные заклинания при переключении версии
+  useEffect(() => {
+    setPreparedSpells(new Map())
+  }, [spellVersion])
+
   const availableSpells = useMemo(() => {
     return spells.filter(spell => {
       if (selectedClass && !spell.classes.includes(selectedClass)) return false
       if (spell.level > maxLevel) return false
       return true
     })
-  }, [selectedClass, maxLevel])
+  }, [spells, selectedClass, maxLevel])
 
   const filteredSpells = useMemo(() => {
     return availableSpells.filter(spell => {
@@ -57,12 +74,27 @@ function App() {
     setPreparedSpells(prev => {
       const next = new Map(prev)
       const currentState = next.get(spellId) || 0
-      // Циклическое переключение: 0 -> 1 -> 2 -> 0
-      const nextState = (currentState + 1) % 3
-      if (nextState === 0) {
+      // Одно нажатие: 0 -> 1, 1 -> 0
+      if (currentState === 0) {
+        next.set(spellId, 1)
+      } else if (currentState === 1) {
+        next.delete(spellId)
+      } else if (currentState === 2) {
+        next.delete(spellId)
+      }
+      return next
+    })
+  }
+
+  const toggleAlwaysPrepared = (spellId) => {
+    setPreparedSpells(prev => {
+      const next = new Map(prev)
+      const currentState = next.get(spellId) || 0
+      // Двойное нажатие: переключает в состояние "всегда подготовлено" или обратно
+      if (currentState === 2) {
         next.delete(spellId)
       } else {
-        next.set(spellId, nextState)
+        next.set(spellId, 2)
       }
       return next
     })
@@ -100,8 +132,8 @@ function App() {
         setSearchQuery={setSearchQuery}
         levelFilter={levelFilter}
         setLevelFilter={setLevelFilter}
-        allClasses={ALL_CLASSES}
-        maxSpellLevel={MAX_SPELL_LEVEL}
+        allClasses={allClasses}
+        maxSpellLevel={maxSpellLevel}
         spellVersion={spellVersion}
         setSpellVersion={setSpellVersion}
       />
@@ -146,6 +178,14 @@ function App() {
         </div>
       </div>
 
+      <div className="hint-box">
+        <div className="hint-icon">💡</div>
+        <div className="hint-text">
+          <strong>Подсказка:</strong> При нажатии на заклинание оно становится подготовленным. 
+          Двойное нажатие делает его всегда подготовленным.
+        </div>
+      </div>
+
       <div className="main-content">
         <SpellStatistics
           preparedSpells={preparedSpells}
@@ -155,6 +195,7 @@ function App() {
           spells={filteredSpells}
           preparedSpells={preparedSpells}
           toggleSpell={toggleSpell}
+          toggleAlwaysPrepared={toggleAlwaysPrepared}
         />
       </div>
       

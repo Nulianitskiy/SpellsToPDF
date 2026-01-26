@@ -86,14 +86,13 @@ function SpellFilters({
               />
               <span>2024</span>
             </label>
-            <label className="version-option version-option-disabled" title="Эта функция ещё не готова">
+            <label className="version-option">
               <input
                 type="radio"
                 name="spellVersion"
                 value="2014"
                 checked={spellVersion === '2014'}
                 onChange={(e) => setSpellVersion(e.target.value)}
-                disabled
               />
               <span>2014</span>
             </label>

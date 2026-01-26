@@ -1,4 +1,4 @@
-function SpellCard({ spell, spellState, onToggle }) {
+function SpellCard({ spell, spellState, onToggle, onDoubleClick }) {
   const levelText = spell.level === 0 ? 'Заговор' : `${spell.level} уровень`
   
   // spellState: 0 = не подготовлено, 1 = подготовлено, 2 = всегда подготовлено
@@ -6,7 +6,10 @@ function SpellCard({ spell, spellState, onToggle }) {
   const isChecked = spellState > 0
 
   return (
-    <div className={`spell-card ${stateClass}`}>
+    <div 
+      className={`spell-card ${stateClass}`}
+      onDoubleClick={onDoubleClick}
+    >
       <label className="spell-card-header">
         <input
           type="checkbox"
