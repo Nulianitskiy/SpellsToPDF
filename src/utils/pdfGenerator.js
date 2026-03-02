@@ -28,7 +28,7 @@ function generateHTMLList(spells) {
       html += `<li><strong>Время накладывания:</strong> ${spell.casting_time}</li>`
       html += `<li><strong>Дистанция:</strong> ${spell.range}</li>`
       const componentsText = spell.components
-        .map(component => (component === 'M' && spell.material ? `M (${spell.material})` : component))
+        .map(component => (component === 'М' && spell.material ? `М (${spell.material})` : component))
         .join(', ')
       html += `<li><strong>Компоненты:</strong> ${componentsText}</li>`
       html += `<li><strong>Длительность:</strong> ${spell.duration}${spell.concentration ? ' (Концентрация)' : ''}</li>`
@@ -60,7 +60,7 @@ function generateHTMLCards(spells) {
     if (spell.ritual) tags.push('Р')
     
     const componentsText = spell.components
-      .map(component => (component === 'M' && spell.material ? `M (${spell.material})` : component))
+      .map(component => (component === 'М' && spell.material ? `М (${spell.material})` : component))
       .join(', ')
 
     // Start a new row every 2 cards

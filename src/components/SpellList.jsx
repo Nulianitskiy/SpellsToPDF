@@ -1,6 +1,10 @@
+import { useState } from 'react'
 import SpellCard from './SpellCard'
 
 function SpellList({ spells, preparedSpells, toggleSpell, toggleAlwaysPrepared }) {
+  // ID заклинания с закреплённым попапом (не более одного одновременно)
+  const [pinnedSpellId, setPinnedSpellId] = useState(null)
+
   if (spells.length === 0) {
     return (
       <div className="spell-list-empty">
@@ -36,6 +40,8 @@ function SpellList({ spells, preparedSpells, toggleSpell, toggleAlwaysPrepared }
                 spellState={preparedSpells.get(spell.id) || 0}
                 onToggle={() => toggleSpell(spell.id)}
                 onDoubleClick={() => toggleAlwaysPrepared(spell.id)}
+                pinnedSpellId={pinnedSpellId}
+                onPin={setPinnedSpellId}
               />
             ))}
           </div>
