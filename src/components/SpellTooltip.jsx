@@ -54,6 +54,7 @@ function SpellTooltip({ spell, cursorPos, pinned, pinProgress, onMouseLeave }) {
 
   const components = spell.components?.join(', ') || '—'
   const material = spell.material ? ` (${spell.material})` : ''
+  const higherLevelsLabel = spell.level === 0 ? 'Усиление заговора: ' : 'На высоких уровнях: '
 
   // Рамка плавно светлеет по мере прогресса, вспыхивает при закреплении
   const borderAlpha = pinned ? 0.85 : pinProgress != null ? 0.4 + pinProgress * 0.45 : 0.4
@@ -115,7 +116,7 @@ function SpellTooltip({ spell, cursorPos, pinned, pinProgress, onMouseLeave }) {
 
       {spell.at_higher_levels && (
         <div className="spell-tooltip-higher">
-          <span className="spell-tooltip-higher-label">На высоких уровнях: </span>
+          <span className="spell-tooltip-higher-label">{higherLevelsLabel}</span>
           {spell.at_higher_levels}
         </div>
       )}

@@ -1,5 +1,21 @@
 import html2pdf from 'html2pdf.js'
 
+function getHigherLevelsText(spell) {
+  if (spell.at_higher_levels && spell.at_higher_levels.trim()) {
+    return spell.at_higher_levels.trim()
+  }
+
+  // Fallback for entries where higher-level scaling stayed in description.
+  const description = spell.description || ''
+  const markerRegex = /(?:^|\n)\s*На\s+(?:более\s+)?высоких\s+уровнях:\s*([\s\S]*)$/i
+  const match = description.match(markerRegex)
+  return match?.[1]?.trim() || ''
+}
+
+function getHigherLevelsLabel(spell) {
+  return spell.level === 0 ? 'Усиление заговора:' : 'На более высоких уровнях:'
+}
+
 function generateHTMLList(spells) {
   // Group spells by level
   const groupedSpells = spells.reduce((groups, spell) => {
@@ -38,8 +54,9 @@ function generateHTMLList(spells) {
       html += '</ul>'
       html += `<p class="description">${spell.description}</p>`
       
-      if (spell.at_higher_levels) {
-        html += `<p class="higher-levels"><strong>На более высоких уровнях:</strong> ${spell.at_higher_levels}</p>`
+      const higherLevelsText = getHigherLevelsText(spell)
+      if (higherLevelsText) {
+        html += `<p class="higher-levels"><strong>${getHigherLevelsLabel(spell)}</strong> ${higherLevelsText}</p>`
       }
       
       html += '</div>'
@@ -93,8 +110,9 @@ function generateHTMLCards(spells) {
     html += `<span class="card-duration">${spell.duration}</span>`
     html += '</div>'
     
-    if (spell.at_higher_levels) {
-      html += `<p class="card-higher-levels"><strong>На более высоких уровнях:</strong> ${spell.at_higher_levels}</p>`
+    const higherLevelsText = getHigherLevelsText(spell)
+    if (higherLevelsText) {
+      html += `<p class="card-higher-levels"><strong>${getHigherLevelsLabel(spell)}</strong> ${higherLevelsText}</p>`
     }
     
     html += '</div>'
