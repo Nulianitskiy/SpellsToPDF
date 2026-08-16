@@ -38,9 +38,24 @@ function getHigherLevelsLabel(spell) {
   return spell.level === 0 ? 'Усиление заговора:' : 'На более высоких уровнях:'
 }
 
-function generateHTMLList(spells, preparedSpells) {
-  // Group spells by level
-  const groupedSpells = spells.reduce((groups, spell) => {
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+function spellAnchorId(spell) {
+  return `spell-${String(spell.id).replace(/[^a-zA-Z0-9_-]/g, '')}`
+}
+
+function getLevelTitle(level) {
+  return level === 0 ? 'Заговоры' : `${level} уровень`
+}
+
+function groupSpellsByLevel(spells) {
+  return spells.reduce((groups, spell) => {
     const level = spell.level
     if (!groups[level]) {
       groups[level] = []
@@ -48,19 +63,108 @@ function generateHTMLList(spells, preparedSpells) {
     groups[level].push(spell)
     return groups
   }, {})
+}
 
+function generateTocHTML(spells, preparedSpells) {
+  const groupedSpells = groupSpellsByLevel(spells)
+  const sortedLevels = Object.keys(groupedSpells).map(Number).sort((a, b) => a - b)
+
+  let html = '<div class="toc">'
+  html += '<h2>Краткий список</h2>'
+
+  for (const level of sortedLevels) {
+    html += '<div class="toc-level">'
+    html += `<div class="toc-level-title">${getLevelTitle(level)}</div>`
+    html += '<div class="toc-list">'
+    for (const spell of groupedSpells[level]) {
+      const stateClass = getStateClass(spell, preparedSpells)
+      html += `<a class="toc-link ${stateClass}" href="#${spellAnchorId(spell)}">${escapeHtml(spell.name)}</a>`
+    }
+    html += '</div></div>'
+  }
+
+  html += '</div>'
+  return html
+}
+
+function pxToPdfUnit(px, k) {
+  return px * 72 / 96 / k
+}
+
+function collectInternalLinks(container, pageSize, margin) {
+  const k = pageSize.k
+  const innerHeight = pageSize.inner.height
+  const containerRect = container.getBoundingClientRect()
+  const targets = new Map()
+
+  container.querySelectorAll('[id^="spell-"]').forEach((el) => {
+    const rect = el.getBoundingClientRect()
+    const top = pxToPdfUnit(rect.top - containerRect.top, k)
+    const page = Math.floor(top / innerHeight) + 1
+    targets.set(el.id, {
+      page,
+      top: margin[0] + (top % innerHeight),
+    })
+  })
+
+  const links = []
+  container.querySelectorAll('a.toc-link[href^="#spell-"]').forEach((link) => {
+    const id = decodeURIComponent(link.getAttribute('href').slice(1))
+    const target = targets.get(id)
+    if (!target) return
+
+    Array.from(link.getClientRects()).forEach((rect) => {
+      const top = pxToPdfUnit(rect.top - containerRect.top, k)
+      const left = pxToPdfUnit(rect.left - containerRect.left, k)
+      links.push({
+        page: Math.floor(top / innerHeight) + 1,
+        x: margin[1] + left,
+        y: margin[0] + (top % innerHeight),
+        width: pxToPdfUnit(rect.width, k),
+        height: pxToPdfUnit(rect.height, k),
+        target,
+      })
+    })
+  })
+
+  return links
+}
+
+function applyInternalLinks(pdf, links) {
+  const pageHeight = pdf.internal.pageSize.getHeight()
+  const nPages = pdf.internal.getNumberOfPages()
+
+  links.forEach((link) => {
+    if (link.page < 1 || link.page > nPages) return
+    if (link.target.page < 1 || link.target.page > nPages) return
+
+    pdf.setPage(link.page)
+    pdf.link(link.x, link.y, link.width, link.height, {
+      pageNumber: link.target.page,
+      magFactor: 'XYZ',
+      top: pageHeight - link.target.top,
+      left: 0,
+      zoom: 0,
+    })
+  })
+
+  pdf.setPage(nPages)
+}
+
+function generateHTMLList(spells, preparedSpells) {
+  const groupedSpells = groupSpellsByLevel(spells)
   const sortedLevels = Object.keys(groupedSpells).map(Number).sort((a, b) => a - b)
 
   let html = '<h1>Подготовленные заклинания</h1>'
   html += getLegendHTML()
+  html += generateTocHTML(spells, preparedSpells)
 
   for (const level of sortedLevels) {
-    const levelTitle = level === 0 ? 'Заговоры' : `${level} уровень`
-    html += `<h2>${levelTitle}</h2>`
+    html += `<h2>${getLevelTitle(level)}</h2>`
 
     for (const spell of groupedSpells[level]) {
       // Wrap each spell in a div with page-break-inside: avoid
-      html += `<div class="spell-block ${getStateClass(spell, preparedSpells)}">`
+      html += `<div class="spell-block ${getStateClass(spell, preparedSpells)}" id="${spellAnchorId(spell)}">`
       html += `<h3>${spell.name}</h3>`
       html += '<ul>'
       html += `<li><strong>Школа:</strong> ${spell.school}</li>`
@@ -92,6 +196,8 @@ function generateHTMLList(spells, preparedSpells) {
 function generateHTMLCards(spells, preparedSpells) {
   let html = '<h1>Подготовленные заклинания</h1>'
   html += getLegendHTML()
+  html += generateTocHTML(spells, preparedSpells)
+  html += '<h2>Описания заклинаний</h2>'
   html += '<div class="cards-container">'
 
   for (let i = 0; i < spells.length; i++) {
@@ -109,7 +215,7 @@ function generateHTMLCards(spells, preparedSpells) {
       html += '<div class="card-row">'
     }
 
-    html += `<div class="spell-card ${getStateClass(spell, preparedSpells)}">`
+    html += `<div class="spell-card ${getStateClass(spell, preparedSpells)}" id="${spellAnchorId(spell)}">`
     html += '<div class="card-header">'
     html += `<span class="card-name">${spell.name}</span>`
     if (tags.length > 0) {
@@ -206,6 +312,46 @@ export async function generatePDF(spells, format = 'list', preparedSpells = new 
     }
     
     .legend-item.always-prepared {
+      color: ${ALWAYS_PREPARED.name};
+    }
+    
+    .toc {
+      margin: 0 0 12px 0;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #ccc;
+    }
+    
+    .toc-level {
+      margin-bottom: 6px;
+    }
+    
+    .toc-level-title {
+      font-size: 10px;
+      font-weight: bold;
+      color: #2d2d44;
+      margin: 0 0 2px 0;
+    }
+    
+    .toc-list {
+      overflow: hidden;
+    }
+    
+    .toc-link {
+      display: block;
+      float: left;
+      width: 50%;
+      box-sizing: border-box;
+      padding: 1px 8px 1px 0;
+      font-size: 9px;
+      text-decoration: underline;
+      line-height: 1.35;
+    }
+    
+    .toc-link.prepared {
+      color: ${PREPARED.name};
+    }
+    
+    .toc-link.always-prepared {
       color: ${ALWAYS_PREPARED.name};
     }
     
@@ -321,6 +467,46 @@ export async function generatePDF(spells, format = 'list', preparedSpells = new 
     }
     
     .legend-item.always-prepared {
+      color: ${ALWAYS_PREPARED.name};
+    }
+    
+    .toc {
+      margin: 0 0 12px 0;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #ccc;
+    }
+    
+    .toc-level {
+      margin-bottom: 6px;
+    }
+    
+    .toc-level-title {
+      font-size: 10px;
+      font-weight: bold;
+      color: #2d2d44;
+      margin: 0 0 2px 0;
+    }
+    
+    .toc-list {
+      overflow: hidden;
+    }
+    
+    .toc-link {
+      display: block;
+      float: left;
+      width: 50%;
+      box-sizing: border-box;
+      padding: 1px 8px 1px 0;
+      font-size: 9px;
+      text-decoration: underline;
+      line-height: 1.35;
+    }
+    
+    .toc-link.prepared {
+      color: ${PREPARED.name};
+    }
+    
+    .toc-link.always-prepared {
       color: ${ALWAYS_PREPARED.name};
     }
     
@@ -506,12 +692,33 @@ export async function generatePDF(spells, format = 'list', preparedSpells = new 
     const colors = el.classList.contains('always-prepared') ? ALWAYS_PREPARED : PREPARED
     el.style.cssText = `display: inline-block; margin-right: 14px; font-weight: bold; color: ${colors.name};`
   })
+
+  wrapper.querySelectorAll('.toc').forEach(el => {
+    el.style.cssText = 'margin: 0 0 12px 0; padding-bottom: 8px; border-bottom: 1px solid #ccc;'
+  })
+
+  wrapper.querySelectorAll('.toc-level').forEach(el => {
+    el.style.cssText = 'margin-bottom: 6px;'
+  })
+
+  wrapper.querySelectorAll('.toc-level-title').forEach(el => {
+    el.style.cssText = 'font-size: 10px; font-weight: bold; color: #2d2d44; margin: 0 0 2px 0;'
+  })
+
+  wrapper.querySelectorAll('.toc-list').forEach(el => {
+    el.style.cssText = 'overflow: hidden;'
+  })
+
+  wrapper.querySelectorAll('.toc-link').forEach(el => {
+    const colors = el.classList.contains('always-prepared') ? ALWAYS_PREPARED : PREPARED
+    el.style.cssText = `display: block; float: left; width: 50%; box-sizing: border-box; padding: 1px 8px 1px 0; font-size: 9px; text-decoration: underline; line-height: 1.35; color: ${colors.name};`
+  })
+
+  wrapper.querySelectorAll('h2').forEach(el => {
+    el.style.cssText = 'font-size: 14px; margin-top: 10px; margin-bottom: 6px; color: #2d2d44; border-bottom: 1px solid #ccc; padding-bottom: 2px; page-break-after: avoid; page-break-before: auto;'
+  })
   
-  if (format === 'list') {
-    wrapper.querySelectorAll('h2').forEach(el => {
-      el.style.cssText = 'font-size: 14px; margin-top: 10px; margin-bottom: 6px; color: #2d2d44; border-bottom: 1px solid #ccc; padding-bottom: 2px; page-break-after: avoid; page-break-before: auto;'
-    })
-    
+  if (format === 'list') { 
     wrapper.querySelectorAll('.spell-block').forEach(el => {
       const colors = el.classList.contains('always-prepared') ? ALWAYS_PREPARED : PREPARED
       el.style.cssText = `page-break-inside: avoid; break-inside: avoid; margin-bottom: 8px; padding: 6px 8px; background: ${colors.background}; border-left: 3px solid ${colors.border};`
@@ -632,6 +839,7 @@ export async function generatePDF(spells, format = 'list', preparedSpells = new 
       format: 'a4', 
       orientation: 'portrait'
     },
+    enableLinks: false,
     pagebreak: format === 'cards' ? { 
       mode: ['avoid-all', 'css', 'legacy'],
       before: '.page-break-before',
@@ -645,13 +853,26 @@ export async function generatePDF(spells, format = 'list', preparedSpells = new 
     }
   }
 
+  let internalLinks = []
+
   const blob = await new Promise((resolve, reject) => {
     html2pdf()
       .set(opt)
       .from(wrapper)
+      .toContainer()
+      .then(function captureInternalLinks() {
+        internalLinks = collectInternalLinks(
+          this.prop.container,
+          this.prop.pageSize,
+          this.opt.margin
+        )
+      })
       .toPdf()
       .get('pdf')
-      .then((pdf) => resolve(pdf.output('blob')))
+      .then((pdf) => {
+        applyInternalLinks(pdf, internalLinks)
+        resolve(pdf.output('blob'))
+      })
       .catch(reject)
   })
   const file = new File([blob], filename, { type: 'application/pdf' })

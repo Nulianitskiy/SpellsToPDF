@@ -136,7 +136,7 @@ const SpellTooltip = forwardRef(function SpellTooltip({
       )}
     </div>
   )
-}
+})
 
 export default SpellTooltip
 
