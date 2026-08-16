@@ -556,12 +556,21 @@ body {
   flex-direction: column;
   gap: 4px;
   flex: 1;
+  min-width: 0;
+}
+
+.spell-info-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .spell-name {
   font-family: 'Cinzel', serif;
   font-size: 1.1rem;
   color: #e8e8e8;
+  min-width: 0;
 }
 
 .spell-card.prepared .spell-name {
@@ -577,6 +586,37 @@ body {
   font-size: 0.85rem;
   color: #8a8a9a;
   font-style: italic;
+}
+
+.spell-compact-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #b0b0c0;
+  flex-shrink: 0;
+}
+
+.spell-card.prepared .spell-compact-badges {
+  color: #ffd700;
+  opacity: 0.85;
+}
+
+.spell-card.always-prepared .spell-compact-badges {
+  color: #ff8a8a;
+}
+
+.spell-icon {
+  display: inline-flex;
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+  color: currentColor;
+}
+
+.spell-icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 .spell-card.prepared .spell-level {
@@ -791,12 +831,22 @@ body {
 }
 
 .spell-tooltip-school {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 0.82rem;
   color: #9a7fff;
   font-style: italic;
 }
 
+.spell-tooltip-school .spell-icon {
+  color: #9a7fff;
+}
+
 .spell-tooltip-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   background: rgba(139, 0, 0, 0.4);
   color: #ff8a8a;
   font-size: 0.72rem;
@@ -805,6 +855,21 @@ body {
   font-weight: bold;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+.spell-tooltip-tag .spell-icon {
+  width: 12px;
+  height: 12px;
+  color: #ff8a8a;
+}
+
+.spell-tooltip-tag--upcast {
+  background: rgba(255, 215, 0, 0.12);
+  color: #ffd700;
+}
+
+.spell-tooltip-tag--upcast .spell-icon {
+  color: #ffd700;
 }
 
 .spell-tooltip-stats {
@@ -823,10 +888,19 @@ body {
 }
 
 .spell-tooltip-stat-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   color: #8a8a9a;
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+.spell-tooltip-stat-label .spell-icon {
+  width: 13px;
+  height: 13px;
+  color: #ffd700;
 }
 
 .spell-tooltip-divider {
@@ -852,8 +926,15 @@ body {
 }
 
 .spell-tooltip-higher-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   color: #ffd700;
   font-weight: 600;
+}
+
+.spell-tooltip-higher-label .spell-icon {
+  color: #ffd700;
 }
 
 /* Import Google Fonts */

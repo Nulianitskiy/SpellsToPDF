@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import SpellTooltip from './SpellTooltip'
+import SpellIcon from './SpellIcon'
 
 const SHOW_DELAY = 300
 const PIN_DELAY = 1500
@@ -209,7 +210,18 @@ function SpellCard({ spell, spellState, onToggle, onDoubleClick, pinnedSpellId, 
           onChange={onToggle}
         />
         <div className="spell-info">
-          <span className="spell-name">{spell.name}</span>
+          <div className="spell-info-main">
+            <span className="spell-name">{spell.name}</span>
+            <div className="spell-compact-badges">
+              <SpellIcon type="school" school={spell.school} title={spell.school} />
+              {spell.concentration && (
+                <SpellIcon type="concentration" title="Концентрация" />
+              )}
+              {spell.ritual && (
+                <SpellIcon type="ritual" title="Ритуал" />
+              )}
+            </div>
+          </div>
           <span className="spell-level">{levelText}</span>
         </div>
       </label>

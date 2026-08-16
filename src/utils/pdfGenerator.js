@@ -1,4 +1,10 @@
 import html2pdf from 'html2pdf.js'
+import {
+  detailedMetaHTML,
+  escapeHtml,
+  formatComponents,
+  tocIconsHTML,
+} from './spellIcons'
 
 const PREPARED = {
   name: '#b8860b',
@@ -13,6 +19,62 @@ const ALWAYS_PREPARED = {
   background: '#fdeaea',
   headerBorder: '#e0b4b4',
 }
+
+const ICON_STYLES = `
+    .spell-icon {
+      display: inline-block;
+      width: 11px;
+      height: 11px;
+      vertical-align: -1px;
+      color: #111;
+      line-height: 0;
+    }
+    
+    .spell-icon svg {
+      width: 11px;
+      height: 11px;
+      display: block;
+    }
+    
+    .toc-legend {
+      font-size: 8px;
+      color: #666;
+      margin: 0 0 6px 0;
+    }
+    
+    .toc-link-name {
+      margin-right: 4px;
+    }
+    
+    .toc-icons {
+      display: inline-block;
+      white-space: nowrap;
+    }
+    
+    .toc-icons .spell-icon {
+      margin-left: 2px;
+    }
+    
+    .spell-icon-stats {
+      margin: 2px 0 4px 0;
+      overflow: hidden;
+    }
+    
+    .spell-icon-stat {
+      display: block;
+      float: left;
+      width: 50%;
+      box-sizing: border-box;
+      padding: 1px 8px 1px 0;
+      font-size: 8px;
+      color: #444;
+      line-height: 1.35;
+    }
+    
+    .spell-icon-stat .spell-icon {
+      margin-right: 4px;
+    }
+`
 
 function getStateClass(spell, preparedSpells) {
   return preparedSpells.get(spell.id) === 2 ? 'always-prepared' : 'prepared'
@@ -36,14 +98,6 @@ function getHigherLevelsText(spell) {
 
 function getHigherLevelsLabel(spell) {
   return spell.level === 0 ? 'Усиление заговора:' : 'На более высоких уровнях:'
-}
-
-function escapeHtml(value) {
-  return String(value)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
 }
 
 function spellAnchorId(spell) {
@@ -71,6 +125,7 @@ function generateTocHTML(spells, preparedSpells) {
 
   let html = '<div class="toc">'
   html += '<h2>Краткий список</h2>'
+  html += '<div class="toc-legend">Иконки: школа, концентрация, ритуал</div>'
 
   for (const level of sortedLevels) {
     html += '<div class="toc-level">'
@@ -78,7 +133,7 @@ function generateTocHTML(spells, preparedSpells) {
     html += '<div class="toc-list">'
     for (const spell of groupedSpells[level]) {
       const stateClass = getStateClass(spell, preparedSpells)
-      html += `<a class="toc-link ${stateClass}" href="#${spellAnchorId(spell)}">${escapeHtml(spell.name)}</a>`
+      html += `<a class="toc-link ${stateClass}" href="#${spellAnchorId(spell)}"><span class="toc-link-name">${escapeHtml(spell.name)}</span>${tocIconsHTML(spell)}</a>`
     }
     html += '</div></div>'
   }
@@ -166,19 +221,10 @@ function generateHTMLList(spells, preparedSpells) {
       // Wrap each spell in a div with page-break-inside: avoid
       html += `<div class="spell-block ${getStateClass(spell, preparedSpells)}" id="${spellAnchorId(spell)}">`
       html += `<h3>${spell.name}</h3>`
-      html += '<ul>'
-      html += `<li><strong>Школа:</strong> ${spell.school}</li>`
-      html += `<li><strong>Время накладывания:</strong> ${spell.casting_time}</li>`
-      html += `<li><strong>Дистанция:</strong> ${spell.range}</li>`
-      const componentsText = spell.components
-        .map(component => (component === 'М' && spell.material ? `М (${spell.material})` : component))
-        .join(', ')
-      html += `<li><strong>Компоненты:</strong> ${componentsText}</li>`
-      html += `<li><strong>Длительность:</strong> ${spell.duration}${spell.concentration ? ' (Концентрация)' : ''}</li>`
-      if (spell.ritual) {
-        html += '<li><strong>Ритуал:</strong> Да</li>'
-      }
-      html += '</ul>'
+      html += detailedMetaHTML(spell, {
+        componentsText: formatComponents(spell),
+        durationText: spell.duration,
+      })
       html += `<p class="description">${spell.description}</p>`
       
       const higherLevelsText = getHigherLevelsText(spell)
@@ -202,13 +248,7 @@ function generateHTMLCards(spells, preparedSpells) {
 
   for (let i = 0; i < spells.length; i++) {
     const spell = spells[i]
-    const tags = []
-    if (spell.concentration) tags.push('К')
-    if (spell.ritual) tags.push('Р')
-    
-    const componentsText = spell.components
-      .map(component => (component === 'М' && spell.material ? `М (${spell.material})` : component))
-      .join(', ')
+    const componentsText = formatComponents(spell)
 
     // Start a new row every 2 cards
     if (i % 2 === 0) {
@@ -218,27 +258,13 @@ function generateHTMLCards(spells, preparedSpells) {
     html += `<div class="spell-card ${getStateClass(spell, preparedSpells)}" id="${spellAnchorId(spell)}">`
     html += '<div class="card-header">'
     html += `<span class="card-name">${spell.name}</span>`
-    if (tags.length > 0) {
-      html += '<span class="card-tags">'
-      tags.forEach(tag => {
-        html += `<span class="tag">${tag}</span>`
-      })
-      html += '</span>'
-    }
     html += '</div>'
-    
-    html += '<div class="card-meta">'
-    html += `<span class="card-school">${spell.school}</span>`
-    html += `<span class="card-casting-time">${spell.casting_time}</span>`
-    html += `<span class="card-range">${spell.range}</span>`
-    html += '</div>'
+    html += detailedMetaHTML(spell, {
+      componentsText,
+      durationText: spell.duration,
+    })
     
     html += `<p class="card-description">${spell.description}</p>`
-    
-    html += '<div class="card-footer">'
-    html += `<span class="card-components">${componentsText}</span>`
-    html += `<span class="card-duration">${spell.duration}</span>`
-    html += '</div>'
     
     const higherLevelsText = getHigherLevelsText(spell)
     if (higherLevelsText) {
@@ -354,7 +380,7 @@ export async function generatePDF(spells, format = 'list', preparedSpells = new 
     .toc-link.always-prepared {
       color: ${ALWAYS_PREPARED.name};
     }
-    
+    ${ICON_STYLES}
     h2 {
       font-size: 14px;
       margin-top: 10px;
@@ -509,7 +535,7 @@ export async function generatePDF(spells, format = 'list', preparedSpells = new 
     .toc-link.always-prepared {
       color: ${ALWAYS_PREPARED.name};
     }
-    
+    ${ICON_STYLES}
     .cards-container {
       display: block;
       width: 100%;
@@ -712,6 +738,26 @@ export async function generatePDF(spells, format = 'list', preparedSpells = new 
   wrapper.querySelectorAll('.toc-link').forEach(el => {
     const colors = el.classList.contains('always-prepared') ? ALWAYS_PREPARED : PREPARED
     el.style.cssText = `display: block; float: left; width: 50%; box-sizing: border-box; padding: 1px 8px 1px 0; font-size: 9px; text-decoration: underline; line-height: 1.35; color: ${colors.name};`
+  })
+
+  wrapper.querySelectorAll('.toc-legend').forEach(el => {
+    el.style.cssText = 'font-size: 8px; color: #666; margin: 0 0 6px 0;'
+  })
+
+  wrapper.querySelectorAll('.spell-icon').forEach(el => {
+    el.style.cssText = 'display: inline-block; width: 11px; height: 11px; vertical-align: -1px; color: #111; line-height: 0;'
+  })
+
+  wrapper.querySelectorAll('.spell-icon svg').forEach(el => {
+    el.style.cssText = 'width: 11px; height: 11px; display: block;'
+  })
+
+  wrapper.querySelectorAll('.spell-icon-stats').forEach(el => {
+    el.style.cssText = 'margin: 2px 0 4px 0; overflow: hidden;'
+  })
+
+  wrapper.querySelectorAll('.spell-icon-stat').forEach(el => {
+    el.style.cssText = 'display: block; float: left; width: 50%; box-sizing: border-box; padding: 1px 8px 1px 0; font-size: 8px; color: #444; line-height: 1.35;'
   })
 
   wrapper.querySelectorAll('h2').forEach(el => {
