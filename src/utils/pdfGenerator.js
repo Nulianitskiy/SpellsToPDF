@@ -76,6 +76,102 @@ const ICON_STYLES = `
     }
 `
 
+const SHARED_STYLES = `
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Georgia', serif;
+      font-size: 10px;
+      line-height: 1.25;
+      color: #333;
+    }
+    
+    h1 {
+      font-size: 20px;
+      margin-bottom: 6px;
+      margin-top: 0;
+      color: #1a1a2e;
+      border-bottom: 2px solid #8b0000;
+      padding-bottom: 4px;
+      page-break-after: avoid;
+    }
+    
+    .legend {
+      margin: 0 0 10px 0;
+      font-size: 9px;
+      page-break-after: avoid;
+    }
+    
+    .legend-item {
+      display: inline-block;
+      margin-right: 14px;
+      font-weight: bold;
+    }
+    
+    .legend-item.prepared {
+      color: ${PREPARED.name};
+    }
+    
+    .legend-item.always-prepared {
+      color: ${ALWAYS_PREPARED.name};
+    }
+    
+    .toc {
+      margin: 0 0 12px 0;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #ccc;
+    }
+    
+    .toc-level {
+      margin-bottom: 6px;
+    }
+    
+    .toc-level-title {
+      font-size: 10px;
+      font-weight: bold;
+      color: #2d2d44;
+      margin: 0 0 2px 0;
+    }
+    
+    .toc-list {
+      overflow: hidden;
+    }
+    
+    .toc-link {
+      display: block;
+      float: left;
+      width: 50%;
+      box-sizing: border-box;
+      padding: 1px 8px 1px 0;
+      font-size: 9px;
+      text-decoration: underline;
+      line-height: 1.35;
+    }
+    
+    .toc-link.prepared {
+      color: ${PREPARED.name};
+    }
+    
+    .toc-link.always-prepared {
+      color: ${ALWAYS_PREPARED.name};
+    }
+    ${ICON_STYLES}
+    h2 {
+      font-size: 14px;
+      margin-top: 10px;
+      margin-bottom: 6px;
+      color: #2d2d44;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 2px;
+      page-break-after: avoid;
+      page-break-before: auto;
+    }
+`
+
 function getStateClass(spell, preparedSpells) {
   return preparedSpells.get(spell.id) === 2 ? 'always-prepared' : 'prepared'
 }
@@ -220,16 +316,16 @@ function generateHTMLList(spells, preparedSpells) {
     for (const spell of groupedSpells[level]) {
       // Wrap each spell in a div with page-break-inside: avoid
       html += `<div class="spell-block ${getStateClass(spell, preparedSpells)}" id="${spellAnchorId(spell)}">`
-      html += `<h3>${spell.name}</h3>`
+      html += `<h3>${escapeHtml(spell.name)}</h3>`
       html += detailedMetaHTML(spell, {
         componentsText: formatComponents(spell),
         durationText: spell.duration,
       })
-      html += `<p class="description">${spell.description}</p>`
+      html += `<p class="description">${escapeHtml(spell.description || '')}</p>`
       
       const higherLevelsText = getHigherLevelsText(spell)
       if (higherLevelsText) {
-        html += `<p class="higher-levels"><strong>${getHigherLevelsLabel(spell)}</strong> ${higherLevelsText}</p>`
+        html += `<p class="higher-levels"><strong>${escapeHtml(getHigherLevelsLabel(spell))}</strong> ${escapeHtml(higherLevelsText)}</p>`
       }
       
       html += '</div>'
@@ -257,18 +353,18 @@ function generateHTMLCards(spells, preparedSpells) {
 
     html += `<div class="spell-card ${getStateClass(spell, preparedSpells)}" id="${spellAnchorId(spell)}">`
     html += '<div class="card-header">'
-    html += `<span class="card-name">${spell.name}</span>`
+    html += `<span class="card-name">${escapeHtml(spell.name)}</span>`
     html += '</div>'
     html += detailedMetaHTML(spell, {
       componentsText,
       durationText: spell.duration,
     })
     
-    html += `<p class="card-description">${spell.description}</p>`
+    html += `<p class="card-description">${escapeHtml(spell.description || '')}</p>`
     
     const higherLevelsText = getHigherLevelsText(spell)
     if (higherLevelsText) {
-      html += `<p class="card-higher-levels"><strong>${getHigherLevelsLabel(spell)}</strong> ${higherLevelsText}</p>`
+      html += `<p class="card-higher-levels"><strong>${escapeHtml(getHigherLevelsLabel(spell))}</strong> ${escapeHtml(higherLevelsText)}</p>`
     }
     
     html += '</div>'
@@ -287,7 +383,17 @@ function generateHTMLCards(spells, preparedSpells) {
   return html
 }
 
-export async function generatePDF(spells, format = 'list', preparedSpells = new Map()) {
+function filenamePart(value) {
+  const slug = String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9а-яё-]/gi, '')
+    .slice(0, 48)
+  return slug || 'all'
+}
+
+export async function generatePDF(spells, format = 'list', preparedSpells = new Map(), meta = {}) {
   const html = format === 'cards' ? generateHTMLCards(spells, preparedSpells) : generateHTMLList(spells, preparedSpells)
   
   // Create a container with styling for the PDF
@@ -298,100 +404,7 @@ export async function generatePDF(spells, format = 'list', preparedSpells = new 
   const style = document.createElement('style')
   
   const listStyles = `
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    
-    body {
-      font-family: 'Georgia', serif;
-      font-size: 10px;
-      line-height: 1.25;
-      color: #333;
-    }
-    
-    h1 {
-      font-size: 20px;
-      margin-bottom: 6px;
-      margin-top: 0;
-      color: #1a1a2e;
-      border-bottom: 2px solid #8b0000;
-      padding-bottom: 4px;
-      page-break-after: avoid;
-    }
-    
-    .legend {
-      margin: 0 0 10px 0;
-      font-size: 9px;
-      page-break-after: avoid;
-    }
-    
-    .legend-item {
-      display: inline-block;
-      margin-right: 14px;
-      font-weight: bold;
-    }
-    
-    .legend-item.prepared {
-      color: ${PREPARED.name};
-    }
-    
-    .legend-item.always-prepared {
-      color: ${ALWAYS_PREPARED.name};
-    }
-    
-    .toc {
-      margin: 0 0 12px 0;
-      padding-bottom: 8px;
-      border-bottom: 1px solid #ccc;
-    }
-    
-    .toc-level {
-      margin-bottom: 6px;
-    }
-    
-    .toc-level-title {
-      font-size: 10px;
-      font-weight: bold;
-      color: #2d2d44;
-      margin: 0 0 2px 0;
-    }
-    
-    .toc-list {
-      overflow: hidden;
-    }
-    
-    .toc-link {
-      display: block;
-      float: left;
-      width: 50%;
-      box-sizing: border-box;
-      padding: 1px 8px 1px 0;
-      font-size: 9px;
-      text-decoration: underline;
-      line-height: 1.35;
-    }
-    
-    .toc-link.prepared {
-      color: ${PREPARED.name};
-    }
-    
-    .toc-link.always-prepared {
-      color: ${ALWAYS_PREPARED.name};
-    }
-    ${ICON_STYLES}
-    h2 {
-      font-size: 14px;
-      margin-top: 10px;
-      margin-bottom: 6px;
-      color: #2d2d44;
-      border-bottom: 1px solid #ccc;
-      padding-bottom: 2px;
-      page-break-after: avoid;
-      page-break-before: auto;
-    }
-    
+    ${SHARED_STYLES}
     h3 {
       font-size: 11px;
       margin-bottom: 3px;
@@ -442,6 +455,7 @@ export async function generatePDF(spells, format = 'list', preparedSpells = new 
       margin: 4px 0;
       font-size: 9px;
       text-align: justify;
+      white-space: pre-line;
     }
     
     .higher-levels {
@@ -449,93 +463,12 @@ export async function generatePDF(spells, format = 'list', preparedSpells = new 
       font-size: 9px;
       font-style: italic;
       color: #555;
+      white-space: pre-line;
     }
   `
   
   const cardsStyles = `
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    
-    body {
-      font-family: 'Georgia', serif;
-      font-size: 10px;
-      line-height: 1.4;
-      color: #333;
-    }
-    
-    h1 {
-      font-size: 20px;
-      margin-bottom: 6px;
-      margin-top: 0;
-      color: #1a1a2e;
-      border-bottom: 2px solid #8b0000;
-      padding-bottom: 4px;
-      page-break-after: avoid;
-    }
-    
-    .legend {
-      margin: 0 0 10px 0;
-      font-size: 9px;
-      page-break-after: avoid;
-    }
-    
-    .legend-item {
-      display: inline-block;
-      margin-right: 14px;
-      font-weight: bold;
-    }
-    
-    .legend-item.prepared {
-      color: ${PREPARED.name};
-    }
-    
-    .legend-item.always-prepared {
-      color: ${ALWAYS_PREPARED.name};
-    }
-    
-    .toc {
-      margin: 0 0 12px 0;
-      padding-bottom: 8px;
-      border-bottom: 1px solid #ccc;
-    }
-    
-    .toc-level {
-      margin-bottom: 6px;
-    }
-    
-    .toc-level-title {
-      font-size: 10px;
-      font-weight: bold;
-      color: #2d2d44;
-      margin: 0 0 2px 0;
-    }
-    
-    .toc-list {
-      overflow: hidden;
-    }
-    
-    .toc-link {
-      display: block;
-      float: left;
-      width: 50%;
-      box-sizing: border-box;
-      padding: 1px 8px 1px 0;
-      font-size: 9px;
-      text-decoration: underline;
-      line-height: 1.35;
-    }
-    
-    .toc-link.prepared {
-      color: ${PREPARED.name};
-    }
-    
-    .toc-link.always-prepared {
-      color: ${ALWAYS_PREPARED.name};
-    }
-    ${ICON_STYLES}
+    ${SHARED_STYLES}
     .cards-container {
       display: block;
       width: 100%;
@@ -662,6 +595,7 @@ export async function generatePDF(spells, format = 'list', preparedSpells = new 
       color: #444;
       margin-bottom: 8px;
       text-align: justify;
+      white-space: pre-line;
     }
     
     .card-footer {
@@ -686,6 +620,7 @@ export async function generatePDF(spells, format = 'list', preparedSpells = new 
       font-size: 8px;
       font-style: italic;
       color: #555;
+      white-space: pre-line;
     }
   `
   
@@ -784,11 +719,11 @@ export async function generatePDF(spells, format = 'list', preparedSpells = new 
     })
     
     wrapper.querySelectorAll('.description').forEach(el => {
-      el.style.cssText = 'margin: 4px 0; font-size: 9px; text-align: justify;'
+      el.style.cssText = 'margin: 4px 0; font-size: 9px; text-align: justify; white-space: pre-line;'
     })
     
     wrapper.querySelectorAll('.higher-levels').forEach(el => {
-      el.style.cssText = 'margin-top: 3px; font-size: 9px; font-style: italic; color: #555;'
+      el.style.cssText = 'margin-top: 3px; font-size: 9px; font-style: italic; color: #555; white-space: pre-line;'
     })
   } else {
     // Apply card-specific styles using float for better PDF compatibility
@@ -844,7 +779,7 @@ export async function generatePDF(spells, format = 'list', preparedSpells = new 
     })
     
     wrapper.querySelectorAll('.card-description').forEach(el => {
-      el.style.cssText = 'font-size: 9px; line-height: 1.4; color: #444; margin-bottom: 8px; text-align: justify;'
+      el.style.cssText = 'font-size: 9px; line-height: 1.4; color: #444; margin-bottom: 8px; text-align: justify; white-space: pre-line;'
     })
     
     wrapper.querySelectorAll('.card-footer').forEach(el => {
@@ -860,14 +795,15 @@ export async function generatePDF(spells, format = 'list', preparedSpells = new 
     })
     
     wrapper.querySelectorAll('.card-higher-levels').forEach(el => {
-      el.style.cssText = 'margin-top: 6px; font-size: 8px; font-style: italic; color: #555;'
+      el.style.cssText = 'margin-top: 6px; font-size: 8px; font-style: italic; color: #555; white-space: pre-line;'
     })
   }
 
-  // Generate filename with current date
   const now = new Date()
-  const dateStr = now.toISOString().split('T')[0] // YYYY-MM-DD format
-  const filename = `spellsList-${dateStr}.pdf`
+  const dateStr = now.toISOString().split('T')[0]
+  const classPart = filenamePart(meta.selectedClass)
+  const versionPart = meta.version === '2014' ? '2014' : '2024'
+  const filename = `spells-${classPart}-${versionPart}-${dateStr}.pdf`
 
   const opt = {
     margin: [10, 12, 10, 12], // top, right, bottom, left in mm

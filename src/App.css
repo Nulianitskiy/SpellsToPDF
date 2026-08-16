@@ -352,6 +352,24 @@ body {
   cursor: not-allowed;
 }
 
+.copy-link-btn {
+  background: rgba(255, 215, 0, 0.08);
+  border: 1px solid rgba(255, 215, 0, 0.35);
+  border-radius: 4px;
+  padding: 12px 20px;
+  color: #ffd700;
+  font-size: 0.95rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s;
+  touch-action: manipulation;
+}
+
+.copy-link-btn:hover {
+  background: rgba(255, 215, 0, 0.16);
+  border-color: #ffd700;
+}
+
 /* Hint Box */
 .hint-box {
   display: flex;
@@ -563,6 +581,19 @@ body {
 .spell-card:hover {
   background: rgba(255, 255, 255, 0.06);
   border-color: rgba(255, 215, 0, 0.3);
+}
+
+.spell-card:focus {
+  outline: none;
+}
+
+.spell-card:focus-visible,
+.spell-star-btn:focus-visible,
+.spell-info:focus-visible,
+.copy-link-btn:focus-visible,
+.generate-btn:focus-visible {
+  outline: 2px solid #ffd700;
+  outline-offset: 2px;
 }
 
 .spell-card.prepared {
@@ -860,7 +891,8 @@ body {
     justify-content: space-between;
   }
 
-  .generate-btn {
+  .generate-btn,
+  .copy-link-btn {
     width: 100%;
   }
 }
@@ -1146,7 +1178,4 @@ body {
   border-color: #ff6b6b;
   color: #ff6b6b;
 }
-
-/* Import Google Fonts */
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Crimson+Text:ital@0;1&display=swap');
 

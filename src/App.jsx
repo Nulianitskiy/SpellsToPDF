@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import spells2024 from './data/spellsRu2024.json'
 import spells2014 from './data/spellsRu2014.json'
 import SpellFilters from './components/SpellFilters'
@@ -8,6 +8,7 @@ import ScrollToTopButton from './components/ScrollToTopButton'
 import { generatePDF } from './utils/pdfGenerator'
 import { loadPreparedByVersion, savePreparedByVersion } from './utils/preparedSpellsStorage'
 import { getSchoolKey, isDunamancy, isUpcastable, spellMatchesQuery } from './utils/spellIcons'
+import { buildShareSearch, mapFromShareIds, parseShareUrl } from './utils/shareUrl'
 import './App.css'
 
 const SPELLS_BY_VERSION = {
@@ -19,6 +20,8 @@ const VALID_SPELL_IDS = {
   '2014': new Set(spells2014.map(spell => spell.id)),
   '2024': new Set(spells2024.map(spell => spell.id)),
 }
+
+const initialShare = parseShareUrl(window.location.search)
 
 // Склонение слова "заклинание"
 function pluralizeSpells(count) {
@@ -38,7 +41,7 @@ function pluralizeSpells(count) {
 }
 
 function App() {
-  const [selectedClass, setSelectedClass] = useState('')
+  const [selectedClass, setSelectedClass] = useState(initialShare.selectedClass)
   const [maxLevel, setMaxLevel] = useState(9)
   const [searchQuery, setSearchQuery] = useState('')
   const [levelFilter, setLevelFilter] = useState(null)
@@ -49,10 +52,23 @@ function App() {
   const [onlyDunamancy, setOnlyDunamancy] = useState(false)
   const [onlyPrepared, setOnlyPrepared] = useState(false)
   const [pdfFormat, setPdfFormat] = useState('list') // 'list' or 'cards'
-  const [spellVersion, setSpellVersion] = useState('2024') // '2024' or '2014'
+  const [spellVersion, setSpellVersion] = useState(initialShare.version || '2024')
   const [pdfLoading, setPdfLoading] = useState(false)
+  const [linkCopied, setLinkCopied] = useState(false)
+  const pdfUrlRef = useRef(null)
   // Map: spellId -> state (1 = подготовлено, 2 = всегда подготовлено), отдельно для каждой версии
-  const [preparedByVersion, setPreparedByVersion] = useState(() => loadPreparedByVersion(VALID_SPELL_IDS))
+  const [preparedByVersion, setPreparedByVersion] = useState(() => {
+    const store = loadPreparedByVersion(VALID_SPELL_IDS)
+    if (initialShare.hasSpellList) {
+      const version = initialShare.version || '2024'
+      store[version] = mapFromShareIds(
+        initialShare.preparedIds,
+        initialShare.alwaysIds,
+        VALID_SPELL_IDS[version]
+      )
+    }
+    return store
+  })
 
   const preparedSpells = useMemo(
     () => preparedByVersion[spellVersion] || new Map(),
@@ -62,6 +78,12 @@ function App() {
   useEffect(() => {
     savePreparedByVersion(preparedByVersion)
   }, [preparedByVersion])
+
+  useEffect(() => {
+    return () => {
+      if (pdfUrlRef.current) URL.revokeObjectURL(pdfUrlRef.current)
+    }
+  }, [])
 
   // Выбираем данные на основе версии
   const spells = useMemo(() => {
@@ -104,6 +126,25 @@ function App() {
       setOnlyDunamancy(false)
     }
   }, [hasDunamancy])
+
+  useEffect(() => {
+    if (selectedClass && !allClasses.includes(selectedClass)) {
+      setSelectedClass('')
+    }
+  }, [allClasses, selectedClass])
+
+  useEffect(() => {
+    const search = buildShareSearch({
+      version: spellVersion,
+      selectedClass,
+      preparedMap: preparedSpells,
+    })
+    const next = `${window.location.pathname}${search ? `?${search}` : ''}${window.location.hash}`
+    const current = `${window.location.pathname}${window.location.search}${window.location.hash}`
+    if (next !== current) {
+      window.history.replaceState(null, '', next)
+    }
+  }, [spellVersion, selectedClass, preparedSpells])
 
   const filteredSpells = useMemo(() => {
     return availableSpells.filter(spell => {
@@ -229,7 +270,12 @@ function App() {
     setPdfLoading(true)
 
     try {
-      const { url } = await generatePDF(selectedSpellsData, pdfFormat, preparedSpells)
+      const { url } = await generatePDF(selectedSpellsData, pdfFormat, preparedSpells, {
+        selectedClass,
+        version: spellVersion,
+      })
+      if (pdfUrlRef.current) URL.revokeObjectURL(pdfUrlRef.current)
+      pdfUrlRef.current = url
       if (previewTab && !previewTab.closed) {
         previewTab.location.replace(url)
         previewTab.focus()
@@ -244,6 +290,16 @@ function App() {
       alert('Не удалось создать PDF. Попробуйте ещё раз.')
     } finally {
       setPdfLoading(false)
+    }
+  }
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href)
+      setLinkCopied(true)
+      window.setTimeout(() => setLinkCopied(false), 1600)
+    } catch {
+      alert('Не удалось скопировать ссылку')
     }
   }
 
@@ -323,6 +379,13 @@ function App() {
           >
             {pdfLoading ? 'Создание…' : 'Создать PDF'}
           </button>
+          <button
+            type="button"
+            className="copy-link-btn"
+            onClick={handleCopyLink}
+          >
+            {linkCopied ? 'Ссылка скопирована' : 'Скопировать ссылку'}
+          </button>
         </div>
       </div>
 
@@ -332,8 +395,9 @@ function App() {
           <strong>Подсказки</strong>
           <ul className="hint-list">
             <li>Звезда: подготовить → всегда подготовлено → снять</li>
-            <li>На компьютере: наведение — описание, удержание — закрепить попап</li>
+            <li>На компьютере: наведение или I — описание. Tab, Enter и стрелки для навигации</li>
             <li>На телефоне: нажатие на название открывает описание</li>
+            <li>Ссылку из адресной строки можно отправить — в ней версия, класс и выбранные заклинания</li>
           </ul>
         </div>
       </div>

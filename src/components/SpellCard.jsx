@@ -15,6 +15,7 @@ function SpellCard({
   hoverEnabled,
   pinnedSpellId,
   onPin,
+  onNavigate,
 }) {
   const levelText = spell.level === 0 ? 'Заговор' : `${spell.level} уровень`
 
@@ -214,15 +215,73 @@ function SpellCard({
     scheduleHide()
   }, [scheduleHide])
 
+  const getAnchorPos = useCallback(() => {
+    const rect = cardRef.current?.getBoundingClientRect()
+    if (!rect) return { x: 16, y: 16 }
+    return {
+      x: Math.min(rect.right - 8, window.innerWidth - 16),
+      y: Math.max(8, rect.top + 8),
+    }
+  }, [])
+
+  const pinFromCard = useCallback(() => {
+    const pos = getAnchorPos()
+    lastPointerRef.current = pos
+    cursorPosRef.current = pos
+    setCursorPos(pos)
+    setVisible(true)
+    onPin(spell.id)
+    stopPinProgress()
+  }, [getAnchorPos, onPin, spell.id, stopPinProgress])
+
   const handleInfoClick = (event) => {
     event.preventDefault()
-    if (onOpenDetails) onOpenDetails()
+    if (onOpenDetails) {
+      onOpenDetails()
+      return
+    }
+    if (isPinned) {
+      dismiss()
+      return
+    }
+    pinFromCard()
+  }
+
+  const handleCardKeyDown = (event) => {
+    if (
+      event.key === 'ArrowRight'
+      || event.key === 'ArrowDown'
+      || event.key === 'ArrowLeft'
+      || event.key === 'ArrowUp'
+    ) {
+      onNavigate?.(event)
+      return
+    }
+
+    if (event.target !== cardRef.current) return
+
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      onCycle()
+      return
+    }
+
+    if (event.key === 'i' || event.key === 'I') {
+      event.preventDefault()
+      if (onOpenDetails) onOpenDetails()
+      else if (isPinned) dismiss()
+      else pinFromCard()
+    }
   }
 
   return (
     <div
       ref={cardRef}
       className={`spell-card ${stateClass}`}
+      tabIndex={0}
+      role="group"
+      aria-label={`${spell.name}, ${levelText}${spellState === 1 ? ', подготовлено' : spellState === 2 ? ', всегда подготовлено' : ''}`}
+      onKeyDown={handleCardKeyDown}
       onMouseEnter={hoverEnabled ? handleMouseEnter : undefined}
       onMouseMove={hoverEnabled ? handleMouseMove : undefined}
       onMouseLeave={hoverEnabled ? handleMouseLeave : undefined}
@@ -234,6 +293,7 @@ function SpellCard({
           title={starTitle}
           aria-label={starTitle}
           aria-pressed={spellState > 0}
+          tabIndex={-1}
           onClick={onCycle}
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -247,8 +307,9 @@ function SpellCard({
         <button
           type="button"
           className="spell-info"
+          tabIndex={-1}
           onClick={handleInfoClick}
-          title={onOpenDetails ? 'Открыть описание' : undefined}
+          title={onOpenDetails ? 'Открыть описание' : 'Показать описание'}
         >
           <div className="spell-info-main">
             <span className="spell-name">{spell.name}</span>

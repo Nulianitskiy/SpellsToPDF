@@ -10,6 +10,25 @@ function SpellList({ spells, preparedSpells, cycleSpell, toggleSpell, toggleAlwa
   const [pinnedSpellId, setPinnedSpellId] = useState(null)
   const [detailsSpell, setDetailsSpell] = useState(null)
 
+  const handleNavigate = (event) => {
+    const cards = event.currentTarget.closest('.spell-list')?.querySelectorAll('.spell-card')
+    if (!cards?.length) return
+
+    const current = Array.from(cards).indexOf(event.currentTarget)
+    if (current < 0) return
+
+    let next = current
+    if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+      next = Math.min(cards.length - 1, current + 1)
+    } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+      next = Math.max(0, current - 1)
+    }
+    if (next === current) return
+
+    event.preventDefault()
+    cards[next].focus()
+  }
+
   if (spells.length === 0 && !detailsSpell) {
     return (
       <div className="spell-list-empty">
@@ -56,6 +75,7 @@ function SpellList({ spells, preparedSpells, cycleSpell, toggleSpell, toggleAlwa
                   hoverEnabled={finePointer}
                   pinnedSpellId={pinnedSpellId}
                   onPin={setPinnedSpellId}
+                  onNavigate={handleNavigate}
                 />
               ))}
             </div>
