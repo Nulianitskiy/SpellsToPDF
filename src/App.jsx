@@ -34,6 +34,7 @@ function App() {
   const [preparedSpells, setPreparedSpells] = useState(new Map())
   const [pdfFormat, setPdfFormat] = useState('list') // 'list' or 'cards'
   const [spellVersion, setSpellVersion] = useState('2024') // '2024' or '2014'
+  const [pdfLoading, setPdfLoading] = useState(false)
 
   // Выбираем данные на основе версии
   const spells = useMemo(() => {
@@ -100,7 +101,7 @@ function App() {
     })
   }
 
-  const handleGeneratePDF = () => {
+  const handleGeneratePDF = async () => {
     // Включаем заклинания в состоянии 1 (подготовлено) и 2 (всегда подготовлено)
     const selectedSpellsData = spells.filter(spell => {
       const state = preparedSpells.get(spell.id)
@@ -110,7 +111,53 @@ function App() {
       alert('Выберите хотя бы одно заклинание')
       return
     }
-    generatePDF(selectedSpellsData, pdfFormat)
+
+    // Открываем вкладку сразу, чтобы браузер не заблокировал popup после await
+    const previewTab = window.open('', '_blank')
+    if (previewTab) {
+      previewTab.document.write(`<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Создание PDF…</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #060608;
+        color: #ffd700;
+        font-family: Georgia, serif;
+        font-size: 18px;
+      }
+    </style>
+  </head>
+  <body>Создание PDF…</body>
+</html>`)
+      previewTab.document.close()
+    }
+
+    setPdfLoading(true)
+
+    try {
+      const { url } = await generatePDF(selectedSpellsData, pdfFormat, preparedSpells)
+      if (previewTab && !previewTab.closed) {
+        previewTab.location.replace(url)
+        previewTab.focus()
+      } else if (!window.open(url, '_blank')) {
+        alert('Разрешите всплывающие окна, чтобы открыть PDF')
+      }
+    } catch (error) {
+      console.error(error)
+      if (previewTab && !previewTab.closed) {
+        previewTab.close()
+      }
+      alert('Не удалось создать PDF. Попробуйте ещё раз.')
+    } finally {
+      setPdfLoading(false)
+    }
   }
 
   // Считаем все выбранные заклинания (состояния 1 и 2)
@@ -171,9 +218,9 @@ function App() {
           <button 
             className="generate-btn" 
             onClick={handleGeneratePDF}
-            disabled={preparedCount === 0}
+            disabled={preparedCount === 0 || pdfLoading}
           >
-            Создать PDF
+            {pdfLoading ? 'Создание…' : 'Создать PDF'}
           </button>
         </div>
       </div>

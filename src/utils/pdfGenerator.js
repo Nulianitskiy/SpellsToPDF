@@ -1,5 +1,27 @@
 import html2pdf from 'html2pdf.js'
 
+const PREPARED = {
+  name: '#b8860b',
+  border: '#d4af37',
+  background: '#fff8e1',
+  headerBorder: '#e6d08a',
+}
+
+const ALWAYS_PREPARED = {
+  name: '#8b0000',
+  border: '#8b0000',
+  background: '#fdeaea',
+  headerBorder: '#e0b4b4',
+}
+
+function getStateClass(spell, preparedSpells) {
+  return preparedSpells.get(spell.id) === 2 ? 'always-prepared' : 'prepared'
+}
+
+function getLegendHTML() {
+  return '<div class="legend"><span class="legend-item prepared">Подготовлено</span><span class="legend-item always-prepared">Всегда подготовлено</span></div>'
+}
+
 function getHigherLevelsText(spell) {
   if (spell.at_higher_levels && spell.at_higher_levels.trim()) {
     return spell.at_higher_levels.trim()
@@ -16,7 +38,7 @@ function getHigherLevelsLabel(spell) {
   return spell.level === 0 ? 'Усиление заговора:' : 'На более высоких уровнях:'
 }
 
-function generateHTMLList(spells) {
+function generateHTMLList(spells, preparedSpells) {
   // Group spells by level
   const groupedSpells = spells.reduce((groups, spell) => {
     const level = spell.level
@@ -30,6 +52,7 @@ function generateHTMLList(spells) {
   const sortedLevels = Object.keys(groupedSpells).map(Number).sort((a, b) => a - b)
 
   let html = '<h1>Подготовленные заклинания</h1>'
+  html += getLegendHTML()
 
   for (const level of sortedLevels) {
     const levelTitle = level === 0 ? 'Заговоры' : `${level} уровень`
@@ -37,7 +60,7 @@ function generateHTMLList(spells) {
 
     for (const spell of groupedSpells[level]) {
       // Wrap each spell in a div with page-break-inside: avoid
-      html += '<div class="spell-block">'
+      html += `<div class="spell-block ${getStateClass(spell, preparedSpells)}">`
       html += `<h3>${spell.name}</h3>`
       html += '<ul>'
       html += `<li><strong>Школа:</strong> ${spell.school}</li>`
@@ -66,8 +89,9 @@ function generateHTMLList(spells) {
   return html
 }
 
-function generateHTMLCards(spells) {
+function generateHTMLCards(spells, preparedSpells) {
   let html = '<h1>Подготовленные заклинания</h1>'
+  html += getLegendHTML()
   html += '<div class="cards-container">'
 
   for (let i = 0; i < spells.length; i++) {
@@ -85,7 +109,7 @@ function generateHTMLCards(spells) {
       html += '<div class="card-row">'
     }
 
-    html += '<div class="spell-card">'
+    html += `<div class="spell-card ${getStateClass(spell, preparedSpells)}">`
     html += '<div class="card-header">'
     html += `<span class="card-name">${spell.name}</span>`
     if (tags.length > 0) {
@@ -131,8 +155,8 @@ function generateHTMLCards(spells) {
   return html
 }
 
-export function generatePDF(spells, format = 'list') {
-  const html = format === 'cards' ? generateHTMLCards(spells) : generateHTMLList(spells)
+export async function generatePDF(spells, format = 'list', preparedSpells = new Map()) {
+  const html = format === 'cards' ? generateHTMLCards(spells, preparedSpells) : generateHTMLList(spells, preparedSpells)
   
   // Create a container with styling for the PDF
   const container = document.createElement('div')
@@ -157,12 +181,32 @@ export function generatePDF(spells, format = 'list') {
     
     h1 {
       font-size: 20px;
-      margin-bottom: 12px;
+      margin-bottom: 6px;
       margin-top: 0;
       color: #1a1a2e;
       border-bottom: 2px solid #8b0000;
       padding-bottom: 4px;
       page-break-after: avoid;
+    }
+    
+    .legend {
+      margin: 0 0 10px 0;
+      font-size: 9px;
+      page-break-after: avoid;
+    }
+    
+    .legend-item {
+      display: inline-block;
+      margin-right: 14px;
+      font-weight: bold;
+    }
+    
+    .legend-item.prepared {
+      color: ${PREPARED.name};
+    }
+    
+    .legend-item.always-prepared {
+      color: ${ALWAYS_PREPARED.name};
     }
     
     h2 {
@@ -179,7 +223,6 @@ export function generatePDF(spells, format = 'list') {
     h3 {
       font-size: 11px;
       margin-bottom: 3px;
-      color: #8b0000;
       page-break-after: avoid;
     }
     
@@ -188,8 +231,24 @@ export function generatePDF(spells, format = 'list') {
       break-inside: avoid;
       margin-bottom: 8px;
       padding: 6px 8px;
-      background: #fafafa;
-      border-left: 2px solid #8b0000;
+    }
+    
+    .spell-block.prepared {
+      background: ${PREPARED.background};
+      border-left: 3px solid ${PREPARED.border};
+    }
+    
+    .spell-block.always-prepared {
+      background: ${ALWAYS_PREPARED.background};
+      border-left: 3px solid ${ALWAYS_PREPARED.border};
+    }
+    
+    .spell-block.prepared h3 {
+      color: ${PREPARED.name};
+    }
+    
+    .spell-block.always-prepared h3 {
+      color: ${ALWAYS_PREPARED.name};
     }
     
     ul {
@@ -237,12 +296,32 @@ export function generatePDF(spells, format = 'list') {
     
     h1 {
       font-size: 20px;
-      margin-bottom: 12px;
+      margin-bottom: 6px;
       margin-top: 0;
       color: #1a1a2e;
       border-bottom: 2px solid #8b0000;
       padding-bottom: 4px;
       page-break-after: avoid;
+    }
+    
+    .legend {
+      margin: 0 0 10px 0;
+      font-size: 9px;
+      page-break-after: avoid;
+    }
+    
+    .legend-item {
+      display: inline-block;
+      margin-right: 14px;
+      font-weight: bold;
+    }
+    
+    .legend-item.prepared {
+      color: ${PREPARED.name};
+    }
+    
+    .legend-item.always-prepared {
+      color: ${ALWAYS_PREPARED.name};
     }
     
     .cards-container {
@@ -267,14 +346,22 @@ export function generatePDF(spells, format = 'list') {
       page-break-inside: avoid !important;
       break-inside: avoid !important;
       -webkit-region-break-inside: avoid;
-      border: 1px solid #ccc;
       border-radius: 4px;
       padding: 10px;
-      background: #fafafa;
       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
       width: 49%;
       vertical-align: top;
       box-sizing: border-box;
+    }
+    
+    .spell-card.prepared {
+      background: ${PREPARED.background};
+      border: 1px solid ${PREPARED.border};
+    }
+    
+    .spell-card.always-prepared {
+      background: ${ALWAYS_PREPARED.background};
+      border: 2px solid ${ALWAYS_PREPARED.border};
     }
     
     .spell-card:first-child {
@@ -291,16 +378,30 @@ export function generatePDF(spells, format = 'list') {
       display: block;
       margin-bottom: 8px;
       padding-bottom: 6px;
-      border-bottom: 1px solid #ddd;
       overflow: hidden;
+    }
+    
+    .spell-card.prepared .card-header {
+      border-bottom: 1px solid ${PREPARED.headerBorder};
+    }
+    
+    .spell-card.always-prepared .card-header {
+      border-bottom: 1px solid ${ALWAYS_PREPARED.headerBorder};
     }
     
     .card-name {
       font-size: 12px;
       font-weight: bold;
-      color: #8b0000;
       float: left;
       max-width: 75%;
+    }
+    
+    .spell-card.prepared .card-name {
+      color: ${PREPARED.name};
+    }
+    
+    .spell-card.always-prepared .card-name {
+      color: ${ALWAYS_PREPARED.name};
     }
     
     .card-tags {
@@ -309,7 +410,6 @@ export function generatePDF(spells, format = 'list') {
     }
     
     .tag {
-      background: #8b0000;
       color: #fff;
       font-size: 7px;
       padding: 2px 5px;
@@ -317,6 +417,14 @@ export function generatePDF(spells, format = 'list') {
       font-weight: bold;
       display: inline-block;
       margin-left: 4px;
+    }
+    
+    .spell-card.prepared .tag {
+      background: ${PREPARED.border};
+    }
+    
+    .spell-card.always-prepared .tag {
+      background: ${ALWAYS_PREPARED.border};
     }
     
     .card-meta {
@@ -387,7 +495,16 @@ export function generatePDF(spells, format = 'list') {
   
   // Apply styles directly to elements for html2pdf compatibility
   wrapper.querySelectorAll('h1').forEach(el => {
-    el.style.cssText = 'font-size: 20px; margin-bottom: 12px; margin-top: 0; color: #1a1a2e; border-bottom: 2px solid #8b0000; padding-bottom: 4px; page-break-after: avoid;'
+    el.style.cssText = 'font-size: 20px; margin-bottom: 6px; margin-top: 0; color: #1a1a2e; border-bottom: 2px solid #8b0000; padding-bottom: 4px; page-break-after: avoid;'
+  })
+
+  wrapper.querySelectorAll('.legend').forEach(el => {
+    el.style.cssText = 'margin: 0 0 10px 0; font-size: 9px; page-break-after: avoid;'
+  })
+
+  wrapper.querySelectorAll('.legend-item').forEach(el => {
+    const colors = el.classList.contains('always-prepared') ? ALWAYS_PREPARED : PREPARED
+    el.style.cssText = `display: inline-block; margin-right: 14px; font-weight: bold; color: ${colors.name};`
   })
   
   if (format === 'list') {
@@ -395,12 +512,14 @@ export function generatePDF(spells, format = 'list') {
       el.style.cssText = 'font-size: 14px; margin-top: 10px; margin-bottom: 6px; color: #2d2d44; border-bottom: 1px solid #ccc; padding-bottom: 2px; page-break-after: avoid; page-break-before: auto;'
     })
     
-    wrapper.querySelectorAll('h3').forEach(el => {
-      el.style.cssText = 'font-size: 11px; margin-bottom: 3px; color: #8b0000; page-break-after: avoid;'
-    })
-    
     wrapper.querySelectorAll('.spell-block').forEach(el => {
-      el.style.cssText = 'page-break-inside: avoid; break-inside: avoid; margin-bottom: 8px; padding: 6px 8px; background: #fafafa; border-left: 2px solid #8b0000;'
+      const colors = el.classList.contains('always-prepared') ? ALWAYS_PREPARED : PREPARED
+      el.style.cssText = `page-break-inside: avoid; break-inside: avoid; margin-bottom: 8px; padding: 6px 8px; background: ${colors.background}; border-left: 3px solid ${colors.border};`
+    })
+
+    wrapper.querySelectorAll('h3').forEach(el => {
+      const colors = el.closest('.spell-block')?.classList.contains('always-prepared') ? ALWAYS_PREPARED : PREPARED
+      el.style.cssText = `font-size: 11px; margin-bottom: 3px; color: ${colors.name}; page-break-after: avoid;`
     })
     
     wrapper.querySelectorAll('ul').forEach(el => {
@@ -431,7 +550,9 @@ export function generatePDF(spells, format = 'list') {
     const cards = wrapper.querySelectorAll('.spell-card')
     cards.forEach((el, index) => {
       const isFirstInRow = index % 2 === 0
-      el.style.cssText = 'display: table-cell; page-break-inside: avoid !important; break-inside: avoid !important; -webkit-region-break-inside: avoid; border: 1px solid #ccc; border-radius: 4px; padding: 10px; background: #fafafa; box-shadow: 0 1px 3px rgba(0,0,0,0.1); width: 49%; vertical-align: top; box-sizing: border-box;' + (isFirstInRow ? ' padding-right: 12px;' : '')
+      const colors = el.classList.contains('always-prepared') ? ALWAYS_PREPARED : PREPARED
+      const borderWidth = el.classList.contains('always-prepared') ? '2px' : '1px'
+      el.style.cssText = `display: table-cell; page-break-inside: avoid !important; break-inside: avoid !important; -webkit-region-break-inside: avoid; border: ${borderWidth} solid ${colors.border}; border-radius: 4px; padding: 10px; background: ${colors.background}; box-shadow: 0 1px 3px rgba(0,0,0,0.1); width: 49%; vertical-align: top; box-sizing: border-box;` + (isFirstInRow ? ' padding-right: 12px;' : '')
     })
     
     wrapper.querySelectorAll('.spell-card-empty').forEach(el => {
@@ -439,11 +560,13 @@ export function generatePDF(spells, format = 'list') {
     })
     
     wrapper.querySelectorAll('.card-header').forEach(el => {
-      el.style.cssText = 'display: block; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #ddd; overflow: hidden;'
+      const colors = el.closest('.spell-card')?.classList.contains('always-prepared') ? ALWAYS_PREPARED : PREPARED
+      el.style.cssText = `display: block; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid ${colors.headerBorder}; overflow: hidden;`
     })
     
     wrapper.querySelectorAll('.card-name').forEach(el => {
-      el.style.cssText = 'font-size: 12px; font-weight: bold; color: #8b0000; float: left; max-width: 75%;'
+      const colors = el.closest('.spell-card')?.classList.contains('always-prepared') ? ALWAYS_PREPARED : PREPARED
+      el.style.cssText = `font-size: 12px; font-weight: bold; color: ${colors.name}; float: left; max-width: 75%;`
     })
     
     wrapper.querySelectorAll('.card-tags').forEach(el => {
@@ -451,7 +574,8 @@ export function generatePDF(spells, format = 'list') {
     })
     
     wrapper.querySelectorAll('.tag').forEach(el => {
-      el.style.cssText = 'background: #8b0000; color: #fff; font-size: 7px; padding: 2px 5px; border-radius: 3px; font-weight: bold; display: inline-block; margin-left: 4px;'
+      const colors = el.closest('.spell-card')?.classList.contains('always-prepared') ? ALWAYS_PREPARED : PREPARED
+      el.style.cssText = `background: ${colors.border}; color: #fff; font-size: 7px; padding: 2px 5px; border-radius: 3px; font-weight: bold; display: inline-block; margin-left: 4px;`
     })
     
     wrapper.querySelectorAll('.card-meta').forEach(el => {
@@ -521,5 +645,17 @@ export function generatePDF(spells, format = 'list') {
     }
   }
 
-  html2pdf().set(opt).from(wrapper).save()
+  const blob = await new Promise((resolve, reject) => {
+    html2pdf()
+      .set(opt)
+      .from(wrapper)
+      .toPdf()
+      .get('pdf')
+      .then((pdf) => resolve(pdf.output('blob')))
+      .catch(reject)
+  })
+  const file = new File([blob], filename, { type: 'application/pdf' })
+  const url = URL.createObjectURL(file)
+
+  return { url, filename }
 }
