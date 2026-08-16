@@ -1,3 +1,5 @@
+import SpellIcon from './SpellIcon'
+
 function SpellFilters({
   selectedClass,
   setSelectedClass,
@@ -8,9 +10,23 @@ function SpellFilters({
   levelFilter,
   setLevelFilter,
   allClasses,
+  allSchools,
   maxSpellLevel,
   spellVersion,
-  setSpellVersion
+  setSpellVersion,
+  schoolFilter,
+  setSchoolFilter,
+  onlyRitual,
+  setOnlyRitual,
+  onlyConcentration,
+  setOnlyConcentration,
+  onlyUpcast,
+  setOnlyUpcast,
+  onlyDunamancy,
+  setOnlyDunamancy,
+  onlyPrepared,
+  setOnlyPrepared,
+  hasDunamancy,
 }) {
   const levels = Array.from({ length: maxSpellLevel + 1 }, (_, i) => i)
 
@@ -45,19 +61,76 @@ function SpellFilters({
         </div>
 
         <div className="filter-group">
+          <label>Школа</label>
+          <select
+            value={schoolFilter}
+            onChange={(e) => setSchoolFilter(e.target.value)}
+          >
+            <option value="">Все школы</option>
+            {allSchools.map(school => (
+              <option key={school} value={school}>{school}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="filter-group">
           <label>Поиск</label>
           <input
-            type="text"
-            placeholder="Найти заклинание..."
+            type="search"
+            placeholder="Русское или английское название..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
       </div>
 
+      <div className="filter-flags">
+        <button
+          type="button"
+          className={`flag-btn ${onlyRitual ? 'active' : ''}`}
+          onClick={() => setOnlyRitual(value => !value)}
+        >
+          <SpellIcon type="ritual" title="Ритуал" />
+          Ритуал
+        </button>
+        <button
+          type="button"
+          className={`flag-btn ${onlyConcentration ? 'active' : ''}`}
+          onClick={() => setOnlyConcentration(value => !value)}
+        >
+          <SpellIcon type="concentration" title="Концентрация" />
+          Концентрация
+        </button>
+        <button
+          type="button"
+          className={`flag-btn ${onlyUpcast ? 'active' : ''}`}
+          onClick={() => setOnlyUpcast(value => !value)}
+        >
+          <SpellIcon type="upcast" title="Повышаемое" />
+          Повышаемое
+        </button>
+        {hasDunamancy && (
+          <button
+            type="button"
+            className={`flag-btn ${onlyDunamancy ? 'active' : ''}`}
+            onClick={() => setOnlyDunamancy(value => !value)}
+          >
+            Дюнамантия
+          </button>
+        )}
+        <button
+          type="button"
+          className={`flag-btn ${onlyPrepared ? 'active' : ''}`}
+          onClick={() => setOnlyPrepared(value => !value)}
+        >
+          Только выбранные
+        </button>
+      </div>
+
       <div className="level-filters-wrapper">
         <div className="level-filters">
           <button
+            type="button"
             className={`level-btn ${levelFilter === null ? 'active' : ''}`}
             onClick={() => setLevelFilter(null)}
           >
@@ -65,6 +138,7 @@ function SpellFilters({
           </button>
           {levels.map(level => (
             <button
+              type="button"
               key={level}
               className={`level-btn ${levelFilter === level ? 'active' : ''}`}
               onClick={() => setLevelFilter(level)}

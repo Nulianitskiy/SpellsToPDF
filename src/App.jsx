@@ -6,7 +6,19 @@ import SpellList from './components/SpellList'
 import SpellStatistics from './components/SpellStatistics'
 import ScrollToTopButton from './components/ScrollToTopButton'
 import { generatePDF } from './utils/pdfGenerator'
+import { loadPreparedByVersion, savePreparedByVersion } from './utils/preparedSpellsStorage'
+import { getSchoolKey, isDunamancy, isUpcastable, spellMatchesQuery } from './utils/spellIcons'
 import './App.css'
+
+const SPELLS_BY_VERSION = {
+  '2014': spells2014,
+  '2024': spells2024,
+}
+
+const VALID_SPELL_IDS = {
+  '2014': new Set(spells2014.map(spell => spell.id)),
+  '2024': new Set(spells2024.map(spell => spell.id)),
+}
 
 // Склонение слова "заклинание"
 function pluralizeSpells(count) {
@@ -30,15 +42,30 @@ function App() {
   const [maxLevel, setMaxLevel] = useState(9)
   const [searchQuery, setSearchQuery] = useState('')
   const [levelFilter, setLevelFilter] = useState(null)
-  // Map: spellId -> state (0 = не подготовлено, 1 = подготовлено, 2 = всегда подготовлено)
-  const [preparedSpells, setPreparedSpells] = useState(new Map())
+  const [schoolFilter, setSchoolFilter] = useState('')
+  const [onlyRitual, setOnlyRitual] = useState(false)
+  const [onlyConcentration, setOnlyConcentration] = useState(false)
+  const [onlyUpcast, setOnlyUpcast] = useState(false)
+  const [onlyDunamancy, setOnlyDunamancy] = useState(false)
+  const [onlyPrepared, setOnlyPrepared] = useState(false)
   const [pdfFormat, setPdfFormat] = useState('list') // 'list' or 'cards'
   const [spellVersion, setSpellVersion] = useState('2024') // '2024' or '2014'
   const [pdfLoading, setPdfLoading] = useState(false)
+  // Map: spellId -> state (1 = подготовлено, 2 = всегда подготовлено), отдельно для каждой версии
+  const [preparedByVersion, setPreparedByVersion] = useState(() => loadPreparedByVersion(VALID_SPELL_IDS))
+
+  const preparedSpells = useMemo(
+    () => preparedByVersion[spellVersion] || new Map(),
+    [preparedByVersion, spellVersion]
+  )
+
+  useEffect(() => {
+    savePreparedByVersion(preparedByVersion)
+  }, [preparedByVersion])
 
   // Выбираем данные на основе версии
   const spells = useMemo(() => {
-    return spellVersion === '2014' ? spells2014 : spells2024
+    return SPELLS_BY_VERSION[spellVersion]
   }, [spellVersion])
 
   // Вычисляем классы и максимальный уровень на основе выбранной версии
@@ -50,11 +77,6 @@ function App() {
     return Math.max(...spells.map(spell => spell.level))
   }, [spells])
 
-  // Сбрасываем выбранные заклинания при переключении версии
-  useEffect(() => {
-    setPreparedSpells(new Map())
-  }, [spellVersion])
-
   const availableSpells = useMemo(() => {
     return spells.filter(spell => {
       if (selectedClass && !spell.classes.includes(selectedClass)) return false
@@ -63,16 +85,81 @@ function App() {
     })
   }, [spells, selectedClass, maxLevel])
 
+  const allSchools = useMemo(() => {
+    return [...new Set(availableSpells.map(spell => getSchoolKey(spell.school)).filter(Boolean))].sort()
+  }, [availableSpells])
+
+  const hasDunamancy = useMemo(() => {
+    return availableSpells.some(isDunamancy)
+  }, [availableSpells])
+
+  useEffect(() => {
+    if (schoolFilter && !allSchools.includes(schoolFilter)) {
+      setSchoolFilter('')
+    }
+  }, [allSchools, schoolFilter])
+
+  useEffect(() => {
+    if (!hasDunamancy) {
+      setOnlyDunamancy(false)
+    }
+  }, [hasDunamancy])
+
   const filteredSpells = useMemo(() => {
     return availableSpells.filter(spell => {
       if (levelFilter !== null && spell.level !== levelFilter) return false
-      if (searchQuery && !spell.name.toLowerCase().includes(searchQuery.toLowerCase())) return false
+      if (!spellMatchesQuery(spell, searchQuery)) return false
+      if (schoolFilter && getSchoolKey(spell.school) !== schoolFilter) return false
+      if (onlyRitual && !spell.ritual) return false
+      if (onlyConcentration && !spell.concentration) return false
+      if (onlyUpcast && !isUpcastable(spell)) return false
+      if (onlyDunamancy && !isDunamancy(spell)) return false
+      if (onlyPrepared) {
+        const state = preparedSpells.get(spell.id)
+        if (state !== 1 && state !== 2) return false
+      }
       return true
     })
-  }, [availableSpells, levelFilter, searchQuery])
+  }, [
+    availableSpells,
+    levelFilter,
+    searchQuery,
+    schoolFilter,
+    onlyRitual,
+    onlyConcentration,
+    onlyUpcast,
+    onlyDunamancy,
+    onlyPrepared,
+    preparedSpells,
+  ])
+
+  const updatePreparedSpells = (updater) => {
+    setPreparedByVersion(prev => {
+      const current = prev[spellVersion] || new Map()
+      return {
+        ...prev,
+        [spellVersion]: updater(current),
+      }
+    })
+  }
+
+  const cycleSpell = (spellId) => {
+    updatePreparedSpells(prev => {
+      const next = new Map(prev)
+      const currentState = next.get(spellId) || 0
+      if (currentState === 0) {
+        next.set(spellId, 1)
+      } else if (currentState === 1) {
+        next.set(spellId, 2)
+      } else {
+        next.delete(spellId)
+      }
+      return next
+    })
+  }
 
   const toggleSpell = (spellId) => {
-    setPreparedSpells(prev => {
+    updatePreparedSpells(prev => {
       const next = new Map(prev)
       const currentState = next.get(spellId) || 0
       // Одно нажатие: 0 -> 1, 1 -> 0
@@ -88,10 +175,10 @@ function App() {
   }
 
   const toggleAlwaysPrepared = (spellId) => {
-    setPreparedSpells(prev => {
+    updatePreparedSpells(prev => {
       const next = new Map(prev)
       const currentState = next.get(spellId) || 0
-      // Двойное нажатие: переключает в состояние "всегда подготовлено" или обратно
+      // Звезда: включает «всегда подготовлено» или снимает его
       if (currentState === 2) {
         next.delete(spellId)
       } else {
@@ -180,9 +267,23 @@ function App() {
         levelFilter={levelFilter}
         setLevelFilter={setLevelFilter}
         allClasses={allClasses}
+        allSchools={allSchools}
         maxSpellLevel={maxSpellLevel}
         spellVersion={spellVersion}
         setSpellVersion={setSpellVersion}
+        schoolFilter={schoolFilter}
+        setSchoolFilter={setSchoolFilter}
+        onlyRitual={onlyRitual}
+        setOnlyRitual={setOnlyRitual}
+        onlyConcentration={onlyConcentration}
+        setOnlyConcentration={setOnlyConcentration}
+        onlyUpcast={onlyUpcast}
+        setOnlyUpcast={setOnlyUpcast}
+        onlyDunamancy={onlyDunamancy}
+        setOnlyDunamancy={setOnlyDunamancy}
+        onlyPrepared={onlyPrepared}
+        setOnlyPrepared={setOnlyPrepared}
+        hasDunamancy={hasDunamancy}
       />
 
       <div className="actions">
@@ -230,8 +331,9 @@ function App() {
         <div className="hint-text">
           <strong>Подсказки</strong>
           <ul className="hint-list">
-            <li>Нажатие на заклинание — подготовить. Двойное нажатие — всегда подготовлено</li>
-            <li>Наведение курсора — полное описание заклинания. Удержание курсора — закрепить попап. Увести курсор за пределы попапа — закрыть закреплённый попап</li>
+            <li>Звезда: подготовить → всегда подготовлено → снять</li>
+            <li>На компьютере: наведение — описание, удержание — закрепить попап</li>
+            <li>На телефоне: нажатие на название открывает описание</li>
           </ul>
         </div>
       </div>
@@ -244,6 +346,7 @@ function App() {
         <SpellList
           spells={filteredSpells}
           preparedSpells={preparedSpells}
+          cycleSpell={cycleSpell}
           toggleSpell={toggleSpell}
           toggleAlwaysPrepared={toggleAlwaysPrepared}
         />

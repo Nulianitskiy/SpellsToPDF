@@ -7,12 +7,24 @@ const SHOW_DELAY = 300
 const PIN_DELAY = 1500
 const HIDE_GRACE_MS = 120
 
-function SpellCard({ spell, spellState, onToggle, onDoubleClick, pinnedSpellId, onPin }) {
+function SpellCard({
+  spell,
+  spellState,
+  onCycle,
+  onOpenDetails,
+  hoverEnabled,
+  pinnedSpellId,
+  onPin,
+}) {
   const levelText = spell.level === 0 ? 'Заговор' : `${spell.level} уровень`
 
   // spellState: 0 = не подготовлено, 1 = подготовлено, 2 = всегда подготовлено
   const stateClass = spellState === 1 ? 'prepared' : spellState === 2 ? 'always-prepared' : ''
-  const isChecked = spellState > 0
+  const starTitle = spellState === 0
+    ? 'Подготовить'
+    : spellState === 1
+      ? 'Всегда подготовлено'
+      : 'Снять подготовку'
 
   const isPinned = pinnedSpellId === spell.id
   const [visible, setVisible] = useState(false)
@@ -31,8 +43,10 @@ function SpellCard({ spell, spellState, onToggle, onDoubleClick, pinnedSpellId, 
   const isPinnedRef = useRef(isPinned)
   const onPinRef = useRef(onPin)
 
-  isPinnedRef.current = isPinned
-  onPinRef.current = onPin
+  useEffect(() => {
+    isPinnedRef.current = isPinned
+    onPinRef.current = onPin
+  }, [isPinned, onPin])
 
   const clearTimers = useCallback(() => {
     clearTimeout(showTimerRef.current)
@@ -75,21 +89,25 @@ function SpellCard({ spell, spellState, onToggle, onDoubleClick, pinnedSpellId, 
     }, HIDE_GRACE_MS)
   }, [dismiss, isPointerOverCardOrTooltip])
 
-  // Если другая карточка стала закреплённой — сбрасываем своё состояние
+  const blockedByOtherPin = pinnedSpellId !== null && pinnedSpellId !== spell.id
+
   useEffect(() => {
-    if (pinnedSpellId !== null && pinnedSpellId !== spell.id) {
-      clearTimers()
-      stopPinProgress()
-      setVisible(false)
-      setCursorPos(null)
-    }
-  }, [pinnedSpellId, spell.id, clearTimers, stopPinProgress])
+    if (!blockedByOtherPin) return
+    clearTimeout(showTimerRef.current)
+    clearTimeout(pinTimerRef.current)
+    clearTimeout(hideTimerRef.current)
+    showTimerRef.current = null
+    pinTimerRef.current = null
+    hideTimerRef.current = null
+    cancelAnimationFrame(progressRafRef.current)
+    pinStartRef.current = null
+  }, [blockedByOtherPin])
 
   useEffect(() => () => {
     clearTimers()
   }, [clearTimers])
 
-  const showTooltip = visible || isPinned
+  const showTooltip = hoverEnabled && !blockedByOtherPin && (visible || isPinned)
 
   // Страховка: скролл, уход курсора и смена окна, если mouseleave не пришёл
   useEffect(() => {
@@ -136,6 +154,7 @@ function SpellCard({ spell, spellState, onToggle, onDoubleClick, pinnedSpellId, 
   }, [])
 
   const handleMouseEnter = useCallback((e) => {
+    if (!hoverEnabled) return
     // Если закреплена другая карточка — не показываем
     if (pinnedSpellId !== null && pinnedSpellId !== spell.id) return
 
@@ -168,7 +187,7 @@ function SpellCard({ spell, spellState, onToggle, onDoubleClick, pinnedSpellId, 
         stopPinProgress()
       }, PIN_DELAY)
     }, SHOW_DELAY)
-  }, [isPinned, pinnedSpellId, spell.id, onPin, startPinProgress, stopPinProgress, dismiss, isPointerOverCardOrTooltip])
+  }, [hoverEnabled, isPinned, pinnedSpellId, spell.id, onPin, startPinProgress, stopPinProgress, dismiss, isPointerOverCardOrTooltip])
 
   const handleMouseMove = useCallback((e) => {
     lastPointerRef.current = { x: e.clientX, y: e.clientY }
@@ -176,13 +195,14 @@ function SpellCard({ spell, spellState, onToggle, onDoubleClick, pinnedSpellId, 
   }, [])
 
   const handleMouseLeave = useCallback((e) => {
+    if (!hoverEnabled) return
     if (tooltipRef.current?.contains(e.relatedTarget)) return
     if (isPinned) {
       scheduleHide()
       return
     }
     dismiss()
-  }, [isPinned, scheduleHide, dismiss])
+  }, [hoverEnabled, isPinned, scheduleHide, dismiss])
 
   const handleTooltipMouseEnter = useCallback(() => {
     clearTimeout(hideTimerRef.current)
@@ -194,22 +214,42 @@ function SpellCard({ spell, spellState, onToggle, onDoubleClick, pinnedSpellId, 
     scheduleHide()
   }, [scheduleHide])
 
+  const handleInfoClick = (event) => {
+    event.preventDefault()
+    if (onOpenDetails) onOpenDetails()
+  }
+
   return (
     <div
       ref={cardRef}
       className={`spell-card ${stateClass}`}
-      onDoubleClick={onDoubleClick}
-      onMouseEnter={handleMouseEnter}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
+      onMouseEnter={hoverEnabled ? handleMouseEnter : undefined}
+      onMouseMove={hoverEnabled ? handleMouseMove : undefined}
+      onMouseLeave={hoverEnabled ? handleMouseLeave : undefined}
     >
-      <label className="spell-card-header">
-        <input
-          type="checkbox"
-          checked={isChecked}
-          onChange={onToggle}
-        />
-        <div className="spell-info">
+      <div className="spell-card-header">
+        <button
+          type="button"
+          className={`spell-star-btn ${spellState === 1 ? 'is-prepared' : ''} ${spellState === 2 ? 'is-always' : ''}`}
+          title={starTitle}
+          aria-label={starTitle}
+          aria-pressed={spellState > 0}
+          onClick={onCycle}
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              fill="currentColor"
+              d="M12 2.5l2.7 6.6 7.2.6-5.5 4.6 1.7 7-6.1-3.7-6.1 3.7 1.7-7-5.5-4.6 7.2-.6z"
+            />
+          </svg>
+        </button>
+
+        <button
+          type="button"
+          className="spell-info"
+          onClick={handleInfoClick}
+          title={onOpenDetails ? 'Открыть описание' : undefined}
+        >
           <div className="spell-info-main">
             <span className="spell-name">{spell.name}</span>
             <div className="spell-compact-badges">
@@ -220,13 +260,16 @@ function SpellCard({ spell, spellState, onToggle, onDoubleClick, pinnedSpellId, 
               {spell.ritual && (
                 <SpellIcon type="ritual" title="Ритуал" />
               )}
+              {onOpenDetails && (
+                <span className="spell-open-hint" aria-hidden="true">i</span>
+              )}
             </div>
           </div>
           <span className="spell-level">{levelText}</span>
-        </div>
-      </label>
+        </button>
+      </div>
 
-      {pinProgress !== null && (
+      {!blockedByOtherPin && pinProgress !== null && (
         <div className="spell-card-pin-progress">
           <div
             className="spell-card-pin-progress-bar"

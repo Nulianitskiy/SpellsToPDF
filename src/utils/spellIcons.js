@@ -67,6 +67,18 @@ export function isUpcastable(spell) {
   return /(?:^|\n)\s*На\s+(?:более\s+)?высоких\s+уровнях:/i.test(spell.description || '')
 }
 
+export function isDunamancy(spell) {
+  return /дюнамантия/i.test(spell.school || '')
+}
+
+export function spellMatchesQuery(spell, query) {
+  const needle = String(query || '').trim().toLowerCase()
+  if (!needle) return true
+  if (String(spell.name || '').toLowerCase().includes(needle)) return true
+  if (String(spell.nameEn || '').toLowerCase().includes(needle)) return true
+  return false
+}
+
 export function formatComponents(spell) {
   return (spell.components || [])
     .map((component) => (component === 'М' && spell.material ? `М (${spell.material})` : component))
