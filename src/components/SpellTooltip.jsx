@@ -1,17 +1,30 @@
-import { useEffect, useRef, useState } from 'react'
+import { forwardRef, useEffect, useRef, useState } from 'react'
 
 const TOOLTIP_WIDTH = 340
 const GAP = 12
 
-function SpellTooltip({ spell, cursorPos, pinned, pinProgress, onMouseLeave }) {
-  const tooltipRef = useRef(null)
+const SpellTooltip = forwardRef(function SpellTooltip({
+  spell,
+  cursorPos,
+  pinned,
+  pinProgress,
+  onMouseEnter,
+  onMouseLeave,
+}, ref) {
+  const localRef = useRef(null)
   const [style, setStyle] = useState({ opacity: 0, pointerEvents: 'none' })
   const [wasJustPinned, setWasJustPinned] = useState(false)
 
-  useEffect(() => {
-    if (!tooltipRef.current || !cursorPos) return
+  const setRefs = (node) => {
+    localRef.current = node
+    if (typeof ref === 'function') ref(node)
+    else if (ref) ref.current = node
+  }
 
-    const tooltip = tooltipRef.current.getBoundingClientRect()
+  useEffect(() => {
+    if (!localRef.current || !cursorPos) return
+
+    const tooltip = localRef.current.getBoundingClientRect()
     const viewport = { width: window.innerWidth, height: window.innerHeight }
 
     const spaceRight = viewport.width - cursorPos.x
@@ -72,8 +85,9 @@ function SpellTooltip({ spell, cursorPos, pinned, pinProgress, onMouseLeave }) {
   return (
     <div
       className={classNames}
-      ref={tooltipRef}
+      ref={setRefs}
       style={{ ...style, ...borderStyle }}
+      onMouseEnter={pinned ? onMouseEnter : undefined}
       onMouseLeave={pinned ? onMouseLeave : undefined}
     >
       <div className="spell-tooltip-header">
@@ -125,3 +139,4 @@ function SpellTooltip({ spell, cursorPos, pinned, pinProgress, onMouseLeave }) {
 }
 
 export default SpellTooltip
+

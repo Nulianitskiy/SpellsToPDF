@@ -4,6 +4,7 @@ import SpellTooltip from './SpellTooltip'
 
 const SHOW_DELAY = 300
 const PIN_DELAY = 1500
+const HIDE_GRACE_MS = 120
 
 function SpellCard({ spell, spellState, onToggle, onDoubleClick, pinnedSpellId, onPin }) {
   const levelText = spell.level === 0 ? 'Заговор' : `${spell.level} уровень`
@@ -18,23 +19,29 @@ function SpellCard({ spell, spellState, onToggle, onDoubleClick, pinnedSpellId, 
   const [cursorPos, setCursorPos] = useState(null)
 
   const cardRef = useRef(null)
+  const tooltipRef = useRef(null)
   const showTimerRef = useRef(null)
   const pinTimerRef = useRef(null)
+  const hideTimerRef = useRef(null)
   const progressRafRef = useRef(null)
   const pinStartRef = useRef(null)
   const cursorPosRef = useRef(null)
+  const lastPointerRef = useRef(null)
+  const isPinnedRef = useRef(isPinned)
+  const onPinRef = useRef(onPin)
 
-  // Если другая карточка стала закреплённой — сбрасываем своё состояние
-  useEffect(() => {
-    if (pinnedSpellId !== null && pinnedSpellId !== spell.id) {
-      clearTimeout(showTimerRef.current)
-      clearTimeout(pinTimerRef.current)
-      cancelAnimationFrame(progressRafRef.current)
-      setPinProgress(null)
-      setVisible(false)
-      setCursorPos(null)
-    }
-  }, [pinnedSpellId, spell.id])
+  isPinnedRef.current = isPinned
+  onPinRef.current = onPin
+
+  const clearTimers = useCallback(() => {
+    clearTimeout(showTimerRef.current)
+    clearTimeout(pinTimerRef.current)
+    clearTimeout(hideTimerRef.current)
+    showTimerRef.current = null
+    pinTimerRef.current = null
+    hideTimerRef.current = null
+    cancelAnimationFrame(progressRafRef.current)
+  }, [])
 
   const stopPinProgress = useCallback(() => {
     cancelAnimationFrame(progressRafRef.current)
@@ -42,7 +49,78 @@ function SpellCard({ spell, spellState, onToggle, onDoubleClick, pinnedSpellId, 
     pinStartRef.current = null
   }, [])
 
+  const isPointerOverCardOrTooltip = useCallback(() => {
+    const pos = lastPointerRef.current
+    if (!pos) return false
+    const el = document.elementFromPoint(pos.x, pos.y)
+    if (!el) return false
+    return Boolean(cardRef.current?.contains(el) || tooltipRef.current?.contains(el))
+  }, [])
+
+  const dismiss = useCallback(() => {
+    clearTimers()
+    stopPinProgress()
+    setVisible(false)
+    setCursorPos(null)
+    if (isPinnedRef.current) onPinRef.current(null)
+  }, [clearTimers, stopPinProgress])
+
+  const scheduleHide = useCallback(() => {
+    if (hideTimerRef.current) return
+    hideTimerRef.current = setTimeout(() => {
+      hideTimerRef.current = null
+      if (isPointerOverCardOrTooltip()) return
+      dismiss()
+    }, HIDE_GRACE_MS)
+  }, [dismiss, isPointerOverCardOrTooltip])
+
+  // Если другая карточка стала закреплённой — сбрасываем своё состояние
+  useEffect(() => {
+    if (pinnedSpellId !== null && pinnedSpellId !== spell.id) {
+      clearTimers()
+      stopPinProgress()
+      setVisible(false)
+      setCursorPos(null)
+    }
+  }, [pinnedSpellId, spell.id, clearTimers, stopPinProgress])
+
+  useEffect(() => () => {
+    clearTimers()
+  }, [clearTimers])
+
+  const showTooltip = visible || isPinned
+
+  // Страховка: скролл, уход курсора и смена окна, если mouseleave не пришёл
+  useEffect(() => {
+    if (!showTooltip) return
+
+    const onPointerMove = (e) => {
+      lastPointerRef.current = { x: e.clientX, y: e.clientY }
+      if (isPointerOverCardOrTooltip()) {
+        clearTimeout(hideTimerRef.current)
+        hideTimerRef.current = null
+        return
+      }
+      scheduleHide()
+    }
+
+    const onScrollOrBlur = () => {
+      if (!isPointerOverCardOrTooltip()) dismiss()
+    }
+
+    document.addEventListener('pointermove', onPointerMove)
+    window.addEventListener('scroll', onScrollOrBlur, true)
+    window.addEventListener('blur', onScrollOrBlur)
+
+    return () => {
+      document.removeEventListener('pointermove', onPointerMove)
+      window.removeEventListener('scroll', onScrollOrBlur, true)
+      window.removeEventListener('blur', onScrollOrBlur)
+    }
+  }, [showTooltip, dismiss, scheduleHide, isPointerOverCardOrTooltip])
+
   const startPinProgress = useCallback(() => {
+    cancelAnimationFrame(progressRafRef.current)
     pinStartRef.current = performance.now()
 
     const tick = (now) => {
@@ -59,44 +137,61 @@ function SpellCard({ spell, spellState, onToggle, onDoubleClick, pinnedSpellId, 
   const handleMouseEnter = useCallback((e) => {
     // Если закреплена другая карточка — не показываем
     if (pinnedSpellId !== null && pinnedSpellId !== spell.id) return
+
+    lastPointerRef.current = { x: e.clientX, y: e.clientY }
+    cursorPosRef.current = lastPointerRef.current
+    clearTimeout(hideTimerRef.current)
+    hideTimerRef.current = null
+
     if (isPinned) return
 
-    cursorPosRef.current = { x: e.clientX, y: e.clientY }
+    clearTimeout(showTimerRef.current)
+    clearTimeout(pinTimerRef.current)
 
     showTimerRef.current = setTimeout(() => {
+      if (!isPointerOverCardOrTooltip()) {
+        dismiss()
+        return
+      }
+
       setCursorPos({ ...cursorPosRef.current })
       setVisible(true)
       startPinProgress()
 
       pinTimerRef.current = setTimeout(() => {
+        if (!isPointerOverCardOrTooltip()) {
+          dismiss()
+          return
+        }
         onPin(spell.id)
         stopPinProgress()
       }, PIN_DELAY)
     }, SHOW_DELAY)
-  }, [isPinned, pinnedSpellId, spell.id, onPin, startPinProgress, stopPinProgress])
+  }, [isPinned, pinnedSpellId, spell.id, onPin, startPinProgress, stopPinProgress, dismiss, isPointerOverCardOrTooltip])
 
   const handleMouseMove = useCallback((e) => {
-    cursorPosRef.current = { x: e.clientX, y: e.clientY }
+    lastPointerRef.current = { x: e.clientX, y: e.clientY }
+    cursorPosRef.current = lastPointerRef.current
   }, [])
 
-  const handleMouseLeave = useCallback(() => {
-    if (isPinned) return
+  const handleMouseLeave = useCallback((e) => {
+    if (tooltipRef.current?.contains(e.relatedTarget)) return
+    if (isPinned) {
+      scheduleHide()
+      return
+    }
+    dismiss()
+  }, [isPinned, scheduleHide, dismiss])
 
-    clearTimeout(showTimerRef.current)
-    clearTimeout(pinTimerRef.current)
-    stopPinProgress()
-    setVisible(false)
-    setCursorPos(null)
-  }, [isPinned, stopPinProgress])
+  const handleTooltipMouseEnter = useCallback(() => {
+    clearTimeout(hideTimerRef.current)
+    hideTimerRef.current = null
+  }, [])
 
-  const handleTooltipMouseLeave = useCallback(() => {
-    if (!isPinned) return
-    onPin(null)
-    setVisible(false)
-    setCursorPos(null)
-  }, [isPinned, onPin])
-
-  const showTooltip = visible || isPinned
+  const handleTooltipMouseLeave = useCallback((e) => {
+    if (cardRef.current?.contains(e.relatedTarget)) return
+    scheduleHide()
+  }, [scheduleHide])
 
   return (
     <div
@@ -130,10 +225,12 @@ function SpellCard({ spell, spellState, onToggle, onDoubleClick, pinnedSpellId, 
 
       {showTooltip && cursorPos && createPortal(
         <SpellTooltip
+          ref={tooltipRef}
           spell={spell}
           cursorPos={cursorPos}
           pinned={isPinned}
           pinProgress={pinProgress}
+          onMouseEnter={handleTooltipMouseEnter}
           onMouseLeave={handleTooltipMouseLeave}
         />,
         document.body
